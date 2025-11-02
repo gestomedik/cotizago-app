@@ -1,0 +1,50 @@
+# ============================================
+# HABILITAR MÓDULOS NECESARIOS
+# ============================================
+RewriteEngine On
+
+# ============================================
+# CRÍTICO: PASAR AUTHORIZATION HEADER A PHP
+# ============================================
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+# También con SetEnvIf como respaldo
+SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+
+# ============================================
+# CONFIGURACIÓN CORS (DEBE IR PRIMERO)
+# ============================================
+<IfModule mod_headers.c>
+    Header always set Access-Control-Allow-Origin "http://localhost:3000"
+    Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, Accept"
+    Header always set Access-Control-Allow-Credentials "true"
+</IfModule>
+
+# ============================================
+# MANEJAR PREFLIGHT OPTIONS
+# ============================================
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^(.*)$ index.php?request=$1 [L]
+
+# ============================================
+# REDIRIGIR TODO A index.php
+# ============================================
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php?request=$1 [QSA,L]
+
+# ============================================
+# CONFIGURACIONES DE SEGURIDAD
+# ============================================
+<Files "*.php">
+    Order Allow,Deny
+    Allow from all
+</Files>
+
+# Proteger archivos sensibles
+<FilesMatch "^(config|database)\.php$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>

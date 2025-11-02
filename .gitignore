@@ -1,0 +1,28 @@
+# =================
+# Front-end (Node.js / Next.js)
+# =================
+# Ignora la carpeta de 500MB de paquetes de node
+/frontend/node_modules
+/frontend/.next
+/frontend/out/
+/frontend/.env.local
+/frontend/.env.development.local
+
+# =================
+# Back-end (PHP / Composer)
+# =================
+# Ignora los paquetes de composer si los usas
+/backend/vendor
+
+# ¡¡LA LÍNEA MÁS IMPORTANTE!!
+# Ignora tu archivo de contraseñas. 
+# Asegúrate que la ruta sea correcta.
+/backend/config/config.php
+
+# =================
+# General (macOS, Windows, VS Code)
+# =================
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
