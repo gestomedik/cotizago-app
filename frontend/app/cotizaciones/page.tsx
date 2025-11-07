@@ -88,7 +88,7 @@ export default function CotizacionesPage() {
     if (!confirm(`¿Cambiar esta cotización a ${nuevoEstado}?`)) return;
 
     try {
-      api.cotizaciones.cambiarEstado(id, nuevoEstado)
+      const response = await api.cotizaciones.cambiarEstado(id, nuevoEstado)
       
       if (response.success) {
         alert('Estado actualizado correctamente');
@@ -150,7 +150,7 @@ export default function CotizacionesPage() {
       <DashboardSidebar />
       
       <div className="flex-1 ml-60">
-        <DashboardHeader />
+        <DashboardHeader title="Cotizaciones" />
         
         <main className="p-6">
           {/* Header */}

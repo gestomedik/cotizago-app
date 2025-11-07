@@ -9,11 +9,10 @@ import { Button } from "@/components/ui/button"
 import { DashboardSidebar } from "@/components/dashboard-sidebar"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { api } from "@/lib/api"
-import type { DashboardResumen, ViajeProximo } from "@/lib/types"
 
 export default function DashboardPage() {
-  const [resumen, setResumen] = useState<DashboardResumen | null>(null)
-  const [proximos, setProximos] = useState<ViajeProximo[]>([])
+  const [resumen, setResumen] = useState<any | null>(null)
+  const [proximos, setProximos] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [userName, setUserName] = useState('Usuario')

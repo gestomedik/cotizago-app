@@ -315,7 +315,7 @@ export default function NewQuotationPage() {
   const loadPasajeros = async (clienteId: number) => {
     try {
       setIsLoading(true)
-      const response = await api.pasajeros.list({ cliente_id: clienteId })
+      const response = await api.pasajeros.list(clienteId)
       if (response.success && response.data) {
         setPasajeros(response.data)
       }
