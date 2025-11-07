@@ -1,7 +1,10 @@
 // lib/api.ts - Cliente API para CotizaGO
 // ✅ VERSIÓN CORREGIDA - CAMBIO: usuario_id → agente_id
 
-const API_URL = '/api';
+// Detecta automáticamente si estás en 'production' (npm run build) o 'development' (npm run dev).
+const API_URL = process.env.NODE_ENV === 'production'
+  ? 'https://experienciaslasilla.com/api_cotizago' // 👈 URL de Producción
+  : '/api'; // 👈 URL de Desarrollo (que usa el proxy 'rewrites')
 
 // Función helper para obtener el ID del usuario autenticado
 function getUserId(): number | null {
