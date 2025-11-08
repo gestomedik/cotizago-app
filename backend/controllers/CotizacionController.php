@@ -406,51 +406,97 @@ class CotizacionController {
     /**
      * Insertar vuelo - CORREGIDO para tabla real (con precios y utilidad)
      */
+    /**
+     * Insertar vuelo - ACTUALIZADO CON REDONDO Y ESCALAS
+     */
     private function insertarVuelo($cotizacion_id, $vuelo) {
+        // Mantenemos 'ruta' como un resumen visual rápido
+        $ruta = ($vuelo['origen'] ?? '') . ($vuelo['tipo_vuelo'] === 'redondo' ? ' ⇄ ' : ' → ') . ($vuelo['destino'] ?? '');
+        
         $sql = "INSERT INTO cotizacion_vuelos (
-                    cotizacion_id, aerolinea, ruta,
-                    fecha_salida, hora_salida,
-                    fecha_regreso, hora_regreso,
-                    clase, num_pasajeros,
-                    costo_unitario, costo_total,
-                    precio_venta_unitario, precio_venta_total, -- AÑADIDOS
-                    comision_vuelo, utilidad, notas, -- AÑADIDOS
-                    incluye_equipaje_mano, incluye_equipaje_documentado, -- AÑADIDOS
-                    incluye_seleccion_asiento, incluye_tua -- AÑADIDOS
+                    cotizacion_id, tipo_vuelo, clase, num_pasajeros,
+                    -- DATOS IDA
+                    aerolinea, numero_vuelo, origen, destino, ruta,
+                    fecha_salida, hora_salida, fecha_llegada, hora_llegada,
+                    tiene_escala_ida, lugar_escala_ida, duracion_escala_ida,
+                    -- DATOS REGRESO
+                    aerolinea_regreso, numero_vuelo_regreso, origen_regreso, destino_regreso,
+                    fecha_regreso, hora_regreso, fecha_regreso_llegada, hora_regreso_llegada,
+                    tiene_escala_regreso, lugar_escala_regreso, duracion_escala_regreso,
+                    -- COSTOS Y EXTRAS
+                    costo_unitario, costo_total, precio_venta_unitario, precio_venta_total,
+                    comision_vuelo, utilidad, notas,
+                    incluye_equipaje_mano, incluye_equipaje_documentado,
+                    kg_equipaje_documentado, piezas_equipaje_documentado,
+                    incluye_seleccion_asiento, incluye_tua
                 ) VALUES (
-                    :cotizacion_id, :aerolinea, :ruta,
-                    :fecha_salida, :hora_salida,
-                    :fecha_regreso, :hora_regreso,
-                    :clase, :num_pasajeros,
-                    :costo_unitario, :costo_total,
-                    :precio_venta_unitario, :precio_venta_total, -- AÑADIDOS
-                    :comision_vuelo, :utilidad, :notas, -- AÑADIDOS
-                    :incluye_equipaje_mano, :incluye_equipaje_documentado, -- AÑADIDOS
-                    :incluye_seleccion_asiento, :incluye_tua -- AÑADIDOS
+                    :cotizacion_id, :tipo_vuelo, :clase, :num_pasajeros,
+                    -- IDA
+                    :aerolinea, :numero_vuelo, :origen, :destino, :ruta,
+                    :fecha_salida, :hora_salida, :fecha_llegada, :hora_llegada,
+                    :tiene_escala_ida, :lugar_escala_ida, :duracion_escala_ida,
+                    -- REGRESO
+                    :aerolinea_regreso, :numero_vuelo_regreso, :origen_regreso, :destino_regreso,
+                    :fecha_regreso, :hora_regreso, :fecha_regreso_llegada, :hora_regreso_llegada,
+                    :tiene_escala_regreso, :lugar_escala_regreso, :duracion_escala_regreso,
+                    -- COSTOS
+                    :costo_unitario, :costo_total, :precio_venta_unitario, :precio_venta_total,
+                    :comision_vuelo, :utilidad, :notas,
+                    :incluye_equipaje_mano, :incluye_equipaje_documentado,
+                    :kg_equipaje_documentado, :piezas_equipaje_documentado,
+                    :incluye_seleccion_asiento, :incluye_tua
                 )";
         
         $stmt = $this->conn->prepare($sql);
         
-        $stmt->bindParam(':cotizacion_id', $cotizacion_id);
-        $stmt->bindParam(':aerolinea', $vuelo['aerolinea']);
-        $stmt->bindParam(':ruta', $vuelo['ruta']);
-        $stmt->bindParam(':fecha_salida', $vuelo['fecha_salida']);
-        $stmt->bindParam(':hora_salida', $vuelo['hora_salida']);
-        $stmt->bindParam(':fecha_regreso', $vuelo['fecha_regreso']); // Ya venía correcto del frontend
-        $stmt->bindParam(':hora_regreso', $vuelo['hora_regreso']); // Ya venía correcto del frontend
-        $stmt->bindParam(':clase', $vuelo['clase']);
-        $stmt->bindParam(':num_pasajeros', $vuelo['num_pasajeros']); // ¡CORREGIDO! (antes decía 'cantidad')
-        $stmt->bindParam(':costo_unitario', $vuelo['costo_unitario']);
-        $stmt->bindParam(':costo_total', $vuelo['costo_total']);
-        $stmt->bindParam(':precio_venta_unitario', $vuelo['precio_venta_unitario']);
-        $stmt->bindParam(':precio_venta_total', $vuelo['precio_venta_total']);
-        $stmt->bindParam(':comision_vuelo', $vuelo['comision_vuelo']);
-        $stmt->bindParam(':utilidad', $vuelo['utilidad']);
-        $stmt->bindParam(':notas', $vuelo['notas']);
-        $stmt->bindParam(':incluye_equipaje_mano', $vuelo['incluye_equipaje_mano']);
-        $stmt->bindParam(':incluye_equipaje_documentado', $vuelo['incluye_equipaje_documentado']);
-        $stmt->bindParam(':incluye_seleccion_asiento', $vuelo['incluye_seleccion_asiento']);
-        $stmt->bindParam(':incluye_tua', $vuelo['incluye_tua']);
+        $stmt->bindValue(':cotizacion_id', $cotizacion_id);
+        $stmt->bindValue(':tipo_vuelo', $vuelo['tipo_vuelo'] ?? 'sencillo');
+        $stmt->bindValue(':clase', $vuelo['clase'] ?? 'economica');
+        $stmt->bindValue(':num_pasajeros', $vuelo['cantidad_pasajeros'] ?? 1);
+
+        // --- IDA ---
+        $stmt->bindValue(':aerolinea', $vuelo['aerolinea'] ?? null);
+        $stmt->bindValue(':numero_vuelo', $vuelo['numero_vuelo'] ?? null);
+        $stmt->bindValue(':origen', $vuelo['origen'] ?? null);
+        $stmt->bindValue(':destino', $vuelo['destino'] ?? null);
+        $stmt->bindValue(':ruta', $ruta);
+        $stmt->bindValue(':fecha_salida', $vuelo['fecha_salida'] ?? null);
+        $stmt->bindValue(':hora_salida', $vuelo['hora_salida'] ?? null);
+        $stmt->bindValue(':fecha_llegada', $vuelo['fecha_llegada'] ?? null);
+        $stmt->bindValue(':hora_llegada', $vuelo['hora_llegada'] ?? null);
+        $stmt->bindValue(':tiene_escala_ida', !empty($vuelo['tiene_escala_ida']) ? 1 : 0);
+        $stmt->bindValue(':lugar_escala_ida', $vuelo['lugar_escala_ida'] ?? null);
+        $stmt->bindValue(':duracion_escala_ida', $vuelo['duracion_escala_ida'] ?? null);
+
+        // --- REGRESO ---
+        $stmt->bindValue(':aerolinea_regreso', $vuelo['aerolinea_regreso'] ?? null);
+        $stmt->bindValue(':numero_vuelo_regreso', $vuelo['numero_vuelo_regreso'] ?? null);
+        $stmt->bindValue(':origen_regreso', $vuelo['origen_regreso'] ?? null);
+        $stmt->bindValue(':destino_regreso', $vuelo['destino_regreso'] ?? null);
+        $stmt->bindValue(':fecha_regreso', $vuelo['fecha_regreso'] ?? null);
+        $stmt->bindValue(':hora_regreso', $vuelo['hora_regreso'] ?? null);
+        $stmt->bindValue(':fecha_regreso_llegada', $vuelo['fecha_regreso_llegada'] ?? null);
+        $stmt->bindValue(':hora_regreso_llegada', $vuelo['hora_regreso_llegada'] ?? null);
+        $stmt->bindValue(':tiene_escala_regreso', !empty($vuelo['tiene_escala_regreso']) ? 1 : 0);
+        $stmt->bindValue(':lugar_escala_regreso', $vuelo['lugar_escala_regreso'] ?? null);
+        $stmt->bindValue(':duracion_escala_regreso', $vuelo['duracion_escala_regreso'] ?? null);
+
+        // --- COSTOS ---
+        $stmt->bindValue(':costo_unitario', $vuelo['costo_unitario'] ?? 0);
+        $stmt->bindValue(':costo_total', $vuelo['costo_total'] ?? 0);
+        $stmt->bindValue(':precio_venta_unitario', ($vuelo['costo_unitario'] ?? 0) + ($vuelo['comision_vuelo'] ?? 0));
+        $stmt->bindValue(':precio_venta_total', $vuelo['total_con_comision'] ?? 0);
+        $stmt->bindValue(':comision_vuelo', $vuelo['comision_vuelo'] ?? 0);
+        $stmt->bindValue(':utilidad', ($vuelo['comision_vuelo'] ?? 0) * ($vuelo['cantidad_pasajeros'] ?? 1));
+        $stmt->bindValue(':notas', $vuelo['notas'] ?? '');
+
+        // --- EXTRAS ---
+        $stmt->bindValue(':incluye_equipaje_mano', !empty($vuelo['incluye_equipaje_mano']) ? 1 : 0);
+        $stmt->bindValue(':incluye_equipaje_documentado', !empty($vuelo['incluye_equipaje_documentado']) ? 1 : 0);
+        $stmt->bindValue(':kg_equipaje_documentado', $vuelo['kg_equipaje_documentado'] ?? 0);
+        $stmt->bindValue(':piezas_equipaje_documentado', $vuelo['piezas_equipaje_documentado'] ?? 0);
+        $stmt->bindValue(':incluye_seleccion_asiento', !empty($vuelo['incluye_seleccion_asiento']) ? 1 : 0);
+        $stmt->bindValue(':incluye_tua', !empty($vuelo['incluye_tua']) ? 1 : 0);
         
         $stmt->execute();
     }

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card } from "@/components/ui/card"
+import { VueloForm, VuelosLista } from '@/components/cotizaciones/VueloForm';
 import {
   User,
   Users,
@@ -85,6 +86,7 @@ interface Vuelo {
   incluye_seleccion_asiento: boolean // <-- AÑADIDO
   incluye_tua: boolean // <-- AÑADIDO
   notas: string // <-- AÑADIDO
+  total_con_comision?: number;
 }
 
 interface HotelItem {
@@ -149,6 +151,8 @@ export default function NewQuotationPage() {
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [pasajeros, setPasajeros] = useState<Pasajero[]>([])
   const [selectedPasajeros, setSelectedPasajeros] = useState<number[]>([])
+
+  const totalPasajerosReal = 1 + selectedPasajeros.length;
 
   const [newCliente, setNewCliente] = useState({
     nombre: "",
@@ -355,41 +359,15 @@ export default function NewQuotationPage() {
     })
   }
 
-  const handleAddVuelo = () => {
-    if (!newVuelo.aerolinea) {
-      setError('Completa al menos aerolínea del vuelo')
-      return
-    }
-    // Permitir costo en cero
-    setVuelos([...vuelos, { ...newVuelo }])
-    setNewVuelo({
-      aerolinea: "",
-      numero_vuelo: "",
-      origen: destinoData.origen,
-      destino: destinoData.destino,
-      fecha_salida: destinoData.fecha_salida,
-      hora_salida: "",
-      fecha_llegada: destinoData.fecha_regreso,
-      hora_llegada: "",
-      tiene_escala: false,
-      duracion_vuelo: "",
-      duracion_escala: "",
-      costo_por_persona: 0,
-      precio_venta_por_persona: 0, // <-- AÑADIDO
-      comision_vuelo: 0, // <-- AÑADIDO
-      clase: "economica", // <-- AÑADIDO
-      incluye_equipaje_mano: true, // <-- AÑADIDO
-      incluye_equipaje_documentado: false, // <-- AÑADIDO
-      incluye_seleccion_asiento: false, // <-- AÑADIDO
-      incluye_tua: true, // <-- AÑADIDO
-      notas: "", // <-- AÑADIDO
-    })
-    setError(null)
-  }
+  // ✅ Función simplificada: Recibe el vuelo listo del componente VueloForm
+  const handleAgregarVuelo = (nuevoVuelo: Vuelo) => {
+    setVuelos([...vuelos, nuevoVuelo]);
+  };
 
-  const handleRemoveVuelo = (index: number) => {
-    setVuelos(vuelos.filter((_, i) => i !== index))
-  }
+  // ✅ Función corregida: Elimina por ID único, no por índice del array
+  const handleEliminarVuelo = (idToDelete: string) => {
+    setVuelos(vuelos.filter(v => v.id !== idToDelete));
+  };
 
   const handleAddHotel = () => {
     if (!newHotel.nombre) {
@@ -471,10 +449,10 @@ export default function NewQuotationPage() {
     setTransportaciones(transportaciones.filter((_, i) => i !== index))
   }
 
-  const calcularCostoVuelos = () => {
-    const numPasajeros = selectedPasajeros.length || 1
-    return vuelos.reduce((total, vuelo) => total + (vuelo.costo_por_persona * numPasajeros), 0)
-  }
+  // REEMPLAZA la función antigua con esta:
+const calcularCostoVuelos = () => {
+  return vuelos.reduce((total, vuelo) => total + (vuelo.total_con_comision || 0), 0);
+}
 
   const calcularCostoHoteles = () => {
     return hoteles.reduce((total, hotel) => total + (hotel.costo_total || 0), 0)
@@ -1171,250 +1149,47 @@ export default function NewQuotationPage() {
         )
 
       case 4:
+        // Calculamos el total real de personas (cliente + acompañantes)
+        const totalPaxVuelos = 1 + selectedPasajeros.length;
+        
+        // ✅ Calculamos el GRAN TOTAL acumulado hasta este paso
+        // (En este paso, es solo la suma de los vuelos, pero si hubiera pasos anteriores con costos, los sumaríamos aquí)
+        const granTotalHastaAhora = calcularCostoVuelos();
+
         return (
           <div className="space-y-6">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="font-semibold text-lg">Vuelos agregados</h3>
+                <h3 className="font-semibold text-lg">Vuelos del viaje</h3>
+                {/* ✅ CORRECCIÓN: Usamos la variable totalPaxVuelos */}
                 <p className="text-sm text-gray-600">
-                  {vuelos.length} vuelo(s) • {selectedPasajeros.length} pasajero(s)
+                  Gestiona los vuelos para los {totalPaxVuelos} pasajero(s)
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-gray-600">Total Vuelos</p>
+                {/* ✅ CAMBIO DE TEXTO: Total Cotización */}
+                <p className="text-sm text-gray-600">Total Cotización</p>
                 <p className="text-2xl font-bold text-[#00D4D4]">
-                  ${calcularCostoVuelos().toLocaleString()}
+                  ${granTotalHastaAhora.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                 </p>
               </div>
             </div>
 
-            {vuelos.length > 0 && (
-              <div className="space-y-3 mb-6">
-                {vuelos.map((vuelo, index) => (
-                  <div key={index} className="bg-gray-50 p-4 rounded-lg">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Plane className="w-5 h-5 text-[#00D4D4]" />
-                          <p className="font-semibold">{vuelo.aerolinea}</p>
-                          {vuelo.numero_vuelo && (
-                            <span className="text-sm text-gray-600">#{vuelo.numero_vuelo}</span>
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-700">
-                          {vuelo.origen} → {vuelo.destino}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          Salida: {vuelo.fecha_salida} {vuelo.hora_salida}
-                        </p>
-                        {vuelo.tiene_escala && (
-                          <p className="text-sm text-orange-600">Con escala ({vuelo.duracion_escala})</p>
-                        )}
-                        <p className="text-sm font-medium text-gray-900 mt-2">
-                          ${vuelo.costo_por_persona.toLocaleString()} × {selectedPasajeros.length} = ${(vuelo.costo_por_persona * selectedPasajeros.length).toLocaleString()}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => handleRemoveVuelo(index)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <VuelosLista 
+              vuelos={vuelos} 
+              onEliminar={handleEliminarVuelo} 
+            />
 
-            <div className="border-t pt-6">
-              <h4 className="font-semibold mb-4">Agregar nuevo vuelo</h4>
-              
-              {/* --- LÓGICA DE CÁLCULO EN VIVO --- */}
-              {(() => {
-                const costoNeto = newVuelo.costo_por_persona || 0
-                const precioVenta = newVuelo.precio_venta_por_persona || 0
-                const utilidadVuelo = (precioVenta - costoNeto) || 0
-                
-                return (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Aerolínea *</Label>
-                        <Input
-                          value={newVuelo.aerolinea}
-                          onChange={(e) => setNewVuelo({ ...newVuelo, aerolinea: e.target.value })}
-                          placeholder="Ej: Aeroméxico"
-                        />
-                      </div>
-                      <div>
-                        <Label>Número de Vuelo</Label>
-                        <Input
-                          value={newVuelo.numero_vuelo}
-                          onChange={(e) => setNewVuelo({ ...newVuelo, numero_vuelo: e.target.value })}
-                          placeholder="Ej: AM123"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Fecha Salida</Label>
-                        <Input
-                          type="date"
-                          value={newVuelo.fecha_salida}
-                          onChange={(e) => setNewVuelo({ ...newVuelo, fecha_salida: e.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <Label>Hora Salida</Label>
-                        <Input
-                          type="time"
-                          value={newVuelo.hora_salida}
-                          onChange={(e) => setNewVuelo({ ...newVuelo, hora_salida: e.target.value })}
-                        />
-                      </div>
-                      {/* --- CAMPOS NUEVOS DE LLEGADA --- */}
-                      <div>
-                        <Label>Fecha Llegada</Label>
-                        <Input
-                          type="date"
-                          value={newVuelo.fecha_llegada}
-                          onChange={(e) => setNewVuelo({ ...newVuelo, fecha_llegada: e.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <Label>Hora Llegada</Label>
-                        <Input
-                          type="time"
-                          value={newVuelo.hora_llegada}
-                          onChange={(e) => setNewVuelo({ ...newVuelo, hora_llegada: e.target.value })}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Duración del Vuelo</Label>
-                        <Input
-                          value={newVuelo.duracion_vuelo}
-                          onChange={(e) => setNewVuelo({ ...newVuelo, duracion_vuelo: e.target.value })}
-                          placeholder="Ej: 2h 30m"
-                        />
-                      </div>
-                       <div>
-                        <Label>Clase</Label>
-                        <select
-                          value={newVuelo.clase}
-                          onChange={(e) => setNewVuelo({ ...newVuelo, clase: e.target.value })}
-                          className="w-full p-2 border rounded-lg"
-                        >
-                          <option value="economica">Económica</option>
-                          <option value="premium_economy">Premium Economy</option>
-                          <option value="business">Business</option>
-                          <option value="primera">Primera Clase</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* --- NUEVOS CAMPOS DE COSTO Y PRECIO --- */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t">
-                      <div>
-                        <Label>Costo (Neto) p/p</Label>
-                        <Input
-                          type="number"
-                          value={newVuelo.costo_por_persona}
-                          onChange={(e) => setNewVuelo({ ...newVuelo, costo_por_persona: parseFloat(e.target.value) || 0 })}
-                          placeholder="0.00"
-                          min="0"
-                        />
-                      </div>
-                      <div>
-                        <Label>Precio Venta p/p</Label>
-                        <Input
-                          type="number"
-                          value={newVuelo.precio_venta_por_persona}
-                          onChange={(e) => setNewVuelo({ ...newVuelo, precio_venta_por_persona: parseFloat(e.target.value) || 0 })}
-                          placeholder="0.00"
-                          min="0"
-                        />
-                      </div>
-                      <div>
-                        <Label>Comisión p/p</Label>
-                        <Input
-                          type="number"
-                          value={newVuelo.comision_vuelo}
-                          onChange={(e) => setNewVuelo({ ...newVuelo, comision_vuelo: parseFloat(e.target.value) || 0 })}
-                          placeholder="0.00"
-                          min="0"
-                        />
-                      </div>
-                      <div>
-                        <Label>Utilidad p/p (Auto)</Label>
-                        <Input
-                          value={utilidadVuelo.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}
-                          readOnly
-                          className="bg-green-100 border-green-300"
-                        />
-                      </div>
-                    </div>
-
-                    {/* --- NUEVOS CHECKBOXES DE SERVICIOS --- */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t">
-                      <div className="flex items-center gap-2">
-                        <input type="checkbox" id="tiene_escala" checked={newVuelo.tiene_escala} onChange={(e) => setNewVuelo({ ...newVuelo, tiene_escala: e.target.checked })} />
-                        <Label htmlFor="tiene_escala">¿Tiene escala?</Label>
-                      </div>
-                       <div className="flex items-center gap-2">
-                        <input type="checkbox" id="inc_tua" checked={newVuelo.incluye_tua} onChange={(e) => setNewVuelo({ ...newVuelo, incluye_tua: e.target.checked })} />
-                        <Label htmlFor="inc_tua">Incluye TUA</Label>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <input type="checkbox" id="inc_mano" checked={newVuelo.incluye_equipaje_mano} onChange={(e) => setNewVuelo({ ...newVuelo, incluye_equipaje_mano: e.target.checked })} />
-                        <Label htmlFor="inc_mano">Equipaje de Mano</Label>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <input type="checkbox" id="inc_doc" checked={newVuelo.incluye_equipaje_documentado} onChange={(e) => setNewVuelo({ ...newVuelo, incluye_equipaje_documentado: e.target.checked })} />
-                        <Label htmlFor="inc_doc">Equipaje Documentado</Label>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <input type="checkbox" id="inc_asiento" checked={newVuelo.incluye_seleccion_asiento} onChange={(e) => setNewVuelo({ ...newVuelo, incluye_seleccion_asiento: e.target.checked })} />
-                        <Label htmlFor="inc_asiento">Selección de Asiento</Label>
-                      </div>
-                    </div>
-
-                    {newVuelo.tiene_escala && (
-                      <div className="col-span-2">
-                        <Label>Duración de Escala</Label>
-                        <Input
-                          value={newVuelo.duracion_escala}
-                          onChange={(e) => setNewVuelo({ ...newVuelo, duracion_escala: e.target.value })}
-                          placeholder="Ej: 1h 15m"
-                        />
-                      </div>
-                    )}
-                    
-                    {/* --- NUEVO CAMPO NOTAS --- */}
-                    <div>
-                      <Label>Notas del Vuelo</Label>
-                      <Textarea
-                        value={newVuelo.notas}
-                        onChange={(e) => setNewVuelo({ ...newVuelo, notas: e.target.value })}
-                        placeholder="Ej: Restricciones de equipaje, detalles de la escala, etc."
-                        rows={2}
-                      />
-                    </div>
-                    
-                  </div>
-                )
-              })()}
-
-              <Button
-                onClick={handleAddVuelo}
-                className="w-full mt-4 bg-[#00D4D4] hover:bg-[#00D4D4]/90"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Agregar Vuelo
-              </Button>
+            <div className="mt-6">
+              <VueloForm 
+                onAgregar={handleAgregarVuelo}
+                onCancelar={() => {}}
+                numPasajeros={totalPaxVuelos} // ✅ Pasamos el número correcto al form
+                defaultOrigen={destinoData.origen}
+                defaultDestino={destinoData.destino}
+                fechaInicioViaje={destinoData.fecha_salida}
+                fechaFinViaje={destinoData.fecha_regreso}
+              />
             </div>
           </div>
         )
@@ -2080,153 +1855,115 @@ export default function NewQuotationPage() {
         )
 
       case 8:
-        const costoTotal = calcularCostoTotal()
-        const precioFinal = calcularPrecioFinal()
-        const costoVuelos = calcularCostoVuelos()
-        const costoHoteles = calcularCostoHoteles()
-        const costoTours = calcularCostoTours()
-        const costoTransporte = calcularCostoTransportacion()
+        // 1. Calcular COSTOS NETOS REALES (lo que te cuesta a ti)
+        const costoNetoVuelos = vuelos.reduce((sum, v) => sum + (v.costo_total || 0), 0);
+        const costoNetoHoteles = hoteles.reduce((sum, h) => sum + (h.costo_total || 0), 0);
+        const costoNetoTours = tours.reduce((sum, t) => sum + (t.costo_total || 0), 0); // Asumiendo que ya calculaste el total en el paso 6
+        // Si tours no tiene costo_total, usa: tours.reduce((sum, t) => sum + (t.costo_por_persona * (selectedPasajeros.length + 1)), 0)
+        const costoNetoTransportes = transportaciones.reduce((sum, tr) => sum + (tr.costo_total || 0), 0);
+        const costoNetoSeguros = seguroData.costo_total || 0;
+        const otrosCostos = costosData.otros_costos || 0;
+
+        const granTotalCostoNeto = costoNetoVuelos + costoNetoHoteles + costoNetoTours + costoNetoTransportes + costoNetoSeguros + otrosCostos;
+
+        // 2. Calcular PRECIO DE VENTA FINAL (lo que paga el cliente)
+        // Usamos las funciones que ya tienes que suman los totales con comisión
+        const precioFinal = calcularPrecioFinal(); 
+
+        // 3. Calcular UTILIDAD REAL
+        const utilidadReal = precioFinal - granTotalCostoNeto;
+
+        // 4. Calcular COMISIONES TOTALES (para el agente)
+        const totalPasajeros = selectedPasajeros.length + 1;
+        // NOTA: Asegúrate de que v.comision_vuelo sea la unitaria. Si es así, multiplícala por pasajeros.
+        // Si VueloForm ya guarda la comisión TOTAL en algún campo, úsalo directamente.
+        // Basado en tu último VueloForm, comision_vuelo es UNITARIA.
+        const comisionVuelosTotal = vuelos.reduce((sum, v) => sum + ((v.comision_vuelo || 0) * v.cantidad_pasajeros), 0);
+        
+        const totalComisiones = 
+          comisionVuelosTotal +
+          hoteles.reduce((sum, h) => sum + (h.comision_hotel || 0), 0) +
+          tours.reduce((sum, t) => sum + (t.comision_tour || 0), 0) + // Revisa si es por persona o total
+          transportaciones.reduce((sum, tr) => sum + (tr.comision_transporte || 0), 0) +
+          (seguroData.comision || 0) +
+          comisionMonto; // La comisión extra manual del paso 7
 
         return (
           <div className="space-y-6">
             <div className="bg-gray-50 p-6 rounded-lg space-y-6">
               <div>
-                <h3 className="font-semibold text-gray-900 mb-2">Cliente</h3>
+                <h3 className="font-semibold text-gray-900 mb-2">Resumen del Viaje</h3>
                 <p className="text-gray-700">
                   {selectedClient?.nombre} {selectedClient?.apellido}
                 </p>
-                <p className="text-sm text-gray-600">{selectedClient?.email}</p>
-              </div>
-
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-2">
-                  Pasajeros ({selectedPasajeros.length})
-                </h3>
-                <div className="space-y-1">
-                  {pasajeros
-                    .filter(p => selectedPasajeros.includes(p.id))
-                    .map(p => (
-                      <p key={p.id} className="text-sm text-gray-700">
-                        • {p.nombre} {p.apellido} ({p.tipo_pasajero})
-                      </p>
-                    ))}
-                </div>
-              </div>
-
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-2">Destino</h3>
-                <p className="text-gray-700">
-                  {destinoData.origen} → {destinoData.destino}
-                </p>
                 <p className="text-sm text-gray-600">
-                  {destinoData.fecha_salida} hasta {destinoData.fecha_regreso}
+                  {destinoData.origen} → {destinoData.destino} ({new Date(destinoData.fecha_salida).toLocaleDateString('es-MX')} - {new Date(destinoData.fecha_regreso).toLocaleDateString('es-MX')})
                 </p>
               </div>
 
-              {vuelos.length > 0 && (
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">
-                    Vuelos ({vuelos.length})
-                  </h3>
-                  {vuelos.map((v, i) => (
-                    <p key={i} className="text-sm text-gray-700">
-                      • {v.aerolinea} - (Venta: ${v.precio_venta_por_persona.toLocaleString()} p/p)
-                    </p>
-                  ))}
-                </div>
-              )}
-
-              {hoteles.length > 0 && (
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">
-                    Hoteles ({hoteles.length})
-                  </h3>
-                  {hoteles.map((h, i) => (
-                    <p key={i} className="text-sm text-gray-700">
-                      • {h.nombre} - (Venta: ${h.precio_venta_total.toLocaleString()})
-                    </p>
-                  ))}
-                </div>
-              )}
-
-              {tours.length > 0 && (
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">
-                    Tours ({tours.length})
-                  </h3>
-                  {tours.map((t, i) => (
-                    <p key={i} className="text-sm text-gray-700">
-                      • {t.nombre} - (Venta: ${t.precio_venta_por_persona.toLocaleString()} p/p)
-                    </p>
-                  ))}
-                </div>
-              )}
-
-              {/* --- SECCIÓN DE COSTOS CORREGIDA --- */}
               <div>
-                <h3 className="font-semibold text-gray-900 mb-3">Desglose de Costos (Netos)</h3>
+                <h3 className="font-semibold text-gray-900 mb-3">Desglose Financiero</h3>
                 <div className="space-y-2 text-sm">
+                  {/* COSTOS NETOS */}
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Vuelos:</span>
-                    <span className="font-medium">${costoVuelos.toLocaleString()}</span>
+                    <span className="text-gray-600">Costo Vuelos:</span>
+                    <span className="font-medium">${costoNetoVuelos.toLocaleString('es-MX', {minimumFractionDigits: 2})}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Hoteles:</span>
-                    <span className="font-medium">${costoHoteles.toLocaleString()}</span>
+                    <span className="text-gray-600">Costo Hoteles:</span>
+                    <span className="font-medium">${costoNetoHoteles.toLocaleString('es-MX', {minimumFractionDigits: 2})}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Tours:</span>
-                    <span className="font-medium">${costoTours.toLocaleString()}</span>
+                    <span className="text-gray-600">Costo Tours:</span>
+                    <span className="font-medium">${costoNetoTours.toLocaleString('es-MX', {minimumFractionDigits: 2})}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Transportación:</span>
-                    <span className="font-medium">${costoTransporte.toLocaleString()}</span>
+                    <span className="text-gray-600">Costo Transportación:</span>
+                    <span className="font-medium">${costoNetoTransportes.toLocaleString('es-MX', {minimumFractionDigits: 2})}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Seguros:</span>
-                    <span className="font-medium">${seguroData.costo_total.toLocaleString()}</span>
+                    <span className="text-gray-600">Costo Seguros:</span>
+                    <span className="font-medium">${costoNetoSeguros.toLocaleString('es-MX', {minimumFractionDigits: 2})}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Otros:</span>
-                    <span className="font-medium">${costosData.otros_costos.toLocaleString()}</span>
-                  </div>
-                  <div className="border-t pt-2 flex justify-between font-semibold">
-                    <span>Costo Total:</span>
-                    <span>${costoTotal.toLocaleString()}</span>
+                    <span className="text-gray-600">Otros Costos:</span>
+                    <span className="font-medium">${otrosCostos.toLocaleString('es-MX', {minimumFractionDigits: 2})}</span>
                   </div>
                   
-                  {/* --- SECCIÓN DE UTILIDAD Y PRECIO FINAL CORREGIDA --- */}
-                  <div className="flex justify-between text-[#7CB342]">
-                    <span>Utilidad (Venta - Costo):</span>
-                    <span className="font-semibold">+${(precioFinal - costoTotal - costosData.otros_costos).toLocaleString()}</span>
+                  <div className="border-t pt-2 flex justify-between font-semibold">
+                    <span>Costo Neto Total:</span>
+                    <span>${granTotalCostoNeto.toLocaleString('es-MX', {minimumFractionDigits: 2})}</span>
                   </div>
-                  <div className="border-t pt-2 flex justify-between font-bold text-lg text-[#00D4D4]">
-                    <span>Precio Final:</span>
-                    <span>${precioFinal.toLocaleString()}</span>
+
+                  {/* UTILIDAD */}
+                  <div className="flex justify-between text-green-600 text-base pt-2">
+                    <span className="font-medium">Tu Utilidad Real:</span>
+                    <span className="font-bold">+${utilidadReal.toLocaleString('es-MX', {minimumFractionDigits: 2})}</span>
+                  </div>
+
+                  {/* PRECIO FINAL */}
+                  <div className="border-t-2 border-[#00D4D4] pt-3 mt-2 flex justify-between text-xl">
+                    <span className="font-bold text-gray-900">Precio Final al Cliente:</span>
+                    <span className="font-bold text-[#00D4D4]">${precioFinal.toLocaleString('es-MX', {minimumFractionDigits: 2})}</span>
                   </div>
                 </div>
               </div>
 
-              {/* --- SECCIÓN DE COMISIÓN CORREGIDA --- */}
+              {/* COMISIONES AGENTE */}
               <div className="border-t pt-4 bg-blue-50 p-4 rounded-lg">
-                <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <DollarSign className="w-6 h-6 text-blue-600" />
-                  Comisión del Agente (Auto)
-                </h3>
-                <div className="flex justify-between font-bold text-lg text-blue-900">
-                  <span>Comisión Total:</span>
-                  {/* Sumamos todas las comisiones individuales */}
-                  <span>
-                    ${(
-                      vuelos.reduce((sum, v) => sum + (v.comision_vuelo * (selectedPasajeros.length || 1)), 0) +
-                      hoteles.reduce((sum, h) => sum + h.comision_hotel, 0) +
-                      tours.reduce((sum, t) => sum + (t.comision_tour * (selectedPasajeros.length || 1)), 0) +
-                      transportaciones.reduce((sum, tr) => sum + tr.comision_transporte, 0) +
-                      seguroData.comision
-                    ).toLocaleString()}
-                  </span>
+                <div className="flex justify-between items-center">
+                    <h3 className="font-semibold text-blue-900 flex items-center gap-2">
+                        <DollarSign className="w-5 h-5" /> Comisión Total del Agente
+                    </h3>
+                    <span className="font-bold text-xl text-blue-900">
+                        ${totalComisiones.toLocaleString('es-MX', {minimumFractionDigits: 2})}
+                    </span>
                 </div>
+                <p className="text-xs text-blue-600/70 mt-1">
+                    Suma de todas las comisiones configuradas en cada servicio.
+                </p>
               </div>
+
             </div>
           </div>
         )
