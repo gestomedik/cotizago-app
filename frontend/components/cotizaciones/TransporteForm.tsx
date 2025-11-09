@@ -5,311 +5,238 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
-import { Bus, X } from 'lucide-react';
+import { Bus, X, DollarSign, Calculator, MapPin, Users } from 'lucide-react';
 
-interface Transporte {
+export interface TransporteItem {
   id: string;
-  tipo_transporte: string;
+  tipo_transporte: 'terrestre' | 'aereo' | 'maritimo';
   proveedor: string;
   origen: string;
   destino: string;
-  fecha_servicio: string;
-  hora: string;
   capacidad_pasajeros: number;
+  descripcion: string; // Campo importante según tu indicación
+  
+  // Costos (Lógica Adelante: Costo + Comisión = Precio)
   costo_total: number;
   comision_transporte: number;
-  total_con_comision: number;
+  precio_venta_total: number; // Calculado
+
+  notas?: string;
 }
 
 interface TransporteFormProps {
-  onAgregar: (transporte: Transporte) => void;
+  onAgregar: (item: TransporteItem) => void;
   onCancelar: () => void;
+  defaultOrigen?: string;
+  defaultDestino?: string;
+  numPasajeros?: number;
 }
 
-export function TransporteForm({ onAgregar, onCancelar }: TransporteFormProps) {
-  const [transporte, setTransporte] = useState<Partial<Transporte>>({
+export function TransporteForm({ 
+  onAgregar, 
+  onCancelar,
+  defaultOrigen = '',
+  defaultDestino = '',
+  numPasajeros = 1
+}: TransporteFormProps) {
+
+  const [item, setItem] = useState<Partial<TransporteItem>>({
     tipo_transporte: 'terrestre',
-    capacidad_pasajeros: 1,
+    proveedor: '',
+    origen: defaultOrigen,
+    destino: defaultDestino,
+    capacidad_pasajeros: numPasajeros,
+    descripcion: '',
     costo_total: 0,
     comision_transporte: 0,
   });
 
   const handleChange = (field: string, value: any) => {
-    setTransporte(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setItem(prev => ({ ...prev, [field]: value }));
   };
 
-  const calcularTotal = () => {
-    const costoBase = transporte.costo_total || 0;
-    const comision = transporte.comision_transporte || 0;
-    const total = costoBase + comision;
-    
-    return { costoBase, comision, total };
-  };
+  // CÁLCULO HACIA ADELANTE
+  const costo = item.costo_total || 0;
+  const comision = item.comision_transporte || 0;
+  const precioVenta = costo + comision;
 
   const handleSubmit = () => {
-    const { costoBase, comision, total } = calcularTotal();
-    
-    const transporteCompleto: Transporte = {
-      id: Date.now().toString(),
-      tipo_transporte: transporte.tipo_transporte || 'terrestre',
-      proveedor: transporte.proveedor || '',
-      origen: transporte.origen || '',
-      destino: transporte.destino || '',
-      fecha_servicio: transporte.fecha_servicio || '',
-      hora: transporte.hora || '',
-      capacidad_pasajeros: transporte.capacidad_pasajeros || 1,
-      costo_total: costoBase,
-      comision_transporte: comision,
-      total_con_comision: total,
+    if (!item.descripcion && !item.tipo_transporte) {
+        alert("Por favor completa la descripción o tipo de transporte");
+        return;
+    }
+
+    const nuevoTransporte: TransporteItem = {
+        id: Date.now().toString(),
+        ...item as TransporteItem,
+        tipo_transporte: item.tipo_transporte || 'terrestre',
+        costo_total: costo,
+        comision_transporte: comision,
+        precio_venta_total: precioVenta, // Guardamos el calculado
     };
-    
-    onAgregar(transporteCompleto);
+    onAgregar(nuevoTransporte);
   };
 
-  const { costoBase, comision, total } = calcularTotal();
-
   return (
-    <Card className="p-6">
-      <div className="flex items-center justify-between mb-4">
+    <Card className="p-6 border-[#00D4D4]/20 shadow-lg">
+      <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
-          <Bus className="w-5 h-5 text-[#00D4D4]" />
+          <div className="bg-[#00D4D4]/10 p-2 rounded-full">
+            <Bus className="w-5 h-5 text-[#00D4D4]" />
+          </div>
           <h3 className="font-semibold text-lg">Agregar Transporte</h3>
         </div>
-        <Button variant="ghost" size="sm" onClick={onCancelar}>
-          <X className="w-4 h-4" />
+        <Button variant="ghost" size="sm" onClick={onCancelar} className="hover:bg-red-50 hover:text-red-500">
+          <X className="w-5 h-5" />
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <Label>Tipo de transporte *</Label>
-          <select
-            value={transporte.tipo_transporte || 'terrestre'}
-            onChange={(e) => handleChange('tipo_transporte', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-          >
-            <option value="terrestre">Terrestre</option>
-            <option value="aereo">Aéreo</option>
-            <option value="maritimo">Marítimo</option>
-          </select>
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <Label>Tipo de Transporte</Label>
+                <select 
+                    value={item.tipo_transporte}
+                    onChange={e => handleChange('tipo_transporte', e.target.value)}
+                    className="w-full mt-1.5 p-2.5 border border-gray-200 rounded-md focus:ring-2 focus:ring-[#00D4D4] outline-none"
+                >
+                    <option value="terrestre">Terrestre (Privado/Colectivo)</option>
+                    <option value="aereo">Aéreo (Charter/Privado)</option>
+                    <option value="maritimo">Marítimo (Ferry/Yate)</option>
+                </select>
+            </div>
+            <div>
+                <Label>Proveedor</Label>
+                <Input value={item.proveedor || ''} onChange={e => handleChange('proveedor', e.target.value)} className="mt-1.5" placeholder="Ej: Gaviota Tours" />
+            </div>
+            <div className="md:col-span-2">
+                <Label>Descripción del Servicio *</Label>
+                <Input value={item.descripcion || ''} onChange={e => handleChange('descripcion', e.target.value)} className="mt-1.5" placeholder="Ej: Traslado Aeropuerto - Hotel (Redondo)" />
+            </div>
         </div>
 
-        <div>
-          <Label>Proveedor</Label>
-          <Input
-            value={transporte.proveedor || ''}
-            onChange={(e) => handleChange('proveedor', e.target.value)}
-            placeholder="Nombre del proveedor"
-          />
+        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-3 grid grid-cols-2 gap-4">
+                 <div>
+                    <Label className="flex items-center gap-2 mb-1.5 text-xs font-medium text-slate-500"><MapPin className="w-3.5 h-3.5"/> ORIGEN</Label>
+                    <Input value={item.origen || ''} onChange={e => handleChange('origen', e.target.value)} className="bg-white" placeholder="Ej: Aeropuerto CUN" />
+                 </div>
+                 <div>
+                    <Label className="flex items-center gap-2 mb-1.5 text-xs font-medium text-slate-500"><MapPin className="w-3.5 h-3.5"/> DESTINO</Label>
+                    <Input value={item.destino || ''} onChange={e => handleChange('destino', e.target.value)} className="bg-white" placeholder="Ej: Hotel Xcaret" />
+                 </div>
+            </div>
+            <div>
+                <Label className="flex items-center gap-2 mb-1.5 text-xs font-medium text-slate-500"><Users className="w-3.5 h-3.5"/> PASAJEROS</Label>
+                <Input type="number" min="1" value={item.capacidad_pasajeros} onChange={e => handleChange('capacidad_pasajeros', parseInt(e.target.value) || 1)} className="bg-white" />
+            </div>
         </div>
 
-        <div>
-          <Label>Origen *</Label>
-          <Input
-            value={transporte.origen || ''}
-            onChange={(e) => handleChange('origen', e.target.value)}
-            placeholder="Ej: Aeropuerto"
-          />
-        </div>
+        {/* ✅ SECCIÓN DE COSTOS (Lógica Adelante: Costo + Comisión = Precio) */}
+        <div className="bg-slate-800 p-5 rounded-xl text-white shadow-xl">
+           <h4 className="font-medium mb-4 flex items-center gap-2 text-[#00D4D4]">
+             <DollarSign className="w-5 h-5" /> Costos del Servicio
+           </h4>
+           
+           <div className="grid grid-cols-2 gap-6">
+             {/* INPUT 1: COSTO NETO */}
+             <div>
+               <label className="text-sm text-slate-400 font-medium mb-1.5 block">Costo Neto (Proveedor)</label>
+               <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">$</span>
+                  <Input 
+                    type="number" min="0" step="0.01" 
+                    value={item.costo_total || ''} 
+                    onChange={e => handleChange('costo_total', parseFloat(e.target.value) || 0)}
+                    className="bg-slate-700 border-slate-600 text-white pl-7 h-12 focus-visible:ring-[#00D4D4]"
+                    placeholder="0.00"
+                  />
+               </div>
+             </div>
 
-        <div>
-          <Label>Destino *</Label>
-          <Input
-            value={transporte.destino || ''}
-            onChange={(e) => handleChange('destino', e.target.value)}
-            placeholder="Ej: Hotel"
-          />
-        </div>
+             {/* INPUT 2: COMISIÓN */}
+             <div>
+               <label className="text-sm text-green-400 font-medium mb-1.5 block">Tu Comisión (A sumar)</label>
+               <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500">$</span>
+                  <Input 
+                    type="number" min="0" step="0.01" 
+                    value={item.comision_transporte || ''} 
+                    onChange={e => handleChange('comision_transporte', parseFloat(e.target.value) || 0)}
+                    className="bg-green-900/20 border-green-500/50 text-green-400 font-bold pl-7 h-12 focus-visible:ring-green-500"
+                    placeholder="0.00"
+                  />
+               </div>
+             </div>
+           </div>
 
-        <div>
-          <Label>Fecha del servicio *</Label>
-          <Input
-            type="date"
-            value={transporte.fecha_servicio || ''}
-            onChange={(e) => handleChange('fecha_servicio', e.target.value)}
-          />
-        </div>
-
-        <div>
-          <Label>Hora</Label>
-          <Input
-            type="time"
-            value={transporte.hora || ''}
-            onChange={(e) => handleChange('hora', e.target.value)}
-          />
-        </div>
-
-        <div>
-          <Label>Capacidad de pasajeros</Label>
-          <Input
-            type="number"
-            min="1"
-            value={transporte.capacidad_pasajeros || 1}
-            onChange={(e) => handleChange('capacidad_pasajeros', parseInt(e.target.value))}
-          />
-        </div>
-
-        <div>
-          <Label>Costo del transporte *</Label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              value={transporte.costo_total || 0}
-              onChange={(e) => handleChange('costo_total', parseFloat(e.target.value) || 0)}
-              className="pl-7"
-            />
-          </div>
-        </div>
-
-        <div className="md:col-span-2">
-          <Label>Comisión del transporte</Label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              value={transporte.comision_transporte || 0}
-              onChange={(e) => handleChange('comision_transporte', parseFloat(e.target.value) || 0)}
-              className="pl-7"
-            />
-          </div>
+           {/* Resultado Calculado (Precio Venta) */}
+           <div className="mt-6 pt-4 border-t border-slate-700 flex justify-between items-center">
+                <span className="text-slate-400 text-sm flex items-center gap-2">
+                    <Calculator className="w-4 h-4"/> Precio Final al Cliente:
+                </span>
+                <span className="text-2xl font-bold text-[#00D4D4]">
+                    ${precioVenta.toLocaleString('es-MX', {minimumFractionDigits: 2})}
+                </span>
+           </div>
         </div>
       </div>
 
-      {/* Totales */}
-      <div className="mt-6 bg-gray-50 p-4 rounded-lg">
-        <div className="grid grid-cols-3 gap-4 text-sm">
-          <div>
-            <p className="text-gray-600">Costo base</p>
-            <p className="font-semibold text-lg">
-              ${costoBase.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-            </p>
-          </div>
-          <div>
-            <p className="text-gray-600">Comisión</p>
-            <p className="font-semibold text-lg text-green-600">
-              +${comision.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-            </p>
-          </div>
-          <div>
-            <p className="text-gray-600">Total</p>
-            <p className="font-semibold text-xl text-[#00D4D4]">
-              ${total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Botones */}
-      <div className="mt-6 flex gap-3">
-        <Button onClick={handleSubmit} className="flex-1 bg-[#00D4D4] hover:bg-[#00B8B8]">
-          Agregar Transporte
-        </Button>
-        <Button onClick={onCancelar} variant="outline" className="flex-1">
-          Cancelar
-        </Button>
+      <div className="mt-6 pt-4 border-t flex justify-end gap-3">
+         <Button variant="outline" onClick={onCancelar}>Cancelar</Button>
+         <Button onClick={handleSubmit} className="bg-[#00D4D4] hover:bg-[#00B8B8] px-8">Agregar Transporte</Button>
       </div>
     </Card>
   );
 }
 
-// Lista de transportes agregados
-interface TransportesListaProps {
-  transportes: Transporte[];
-  onEliminar: (id: string) => void;
-}
+// =====================================================================
+// ✅ Componente TransportesLista
+// =====================================================================
 
-export function TransportesLista({ transportes, onEliminar }: TransportesListaProps) {
-  if (transportes.length === 0) {
-    return (
-      <Card className="p-6 text-center text-gray-500">
-        <Bus className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-        <p>No se han agregado transportes</p>
-      </Card>
-    );
-  }
-
-  const totalTransportes = transportes.reduce((sum, t) => sum + t.costo_total, 0);
-  const totalComisiones = transportes.reduce((sum, t) => sum + t.comision_transporte, 0);
-  const totalGeneral = transportes.reduce((sum, t) => sum + t.total_con_comision, 0);
-
-  return (
-    <div className="space-y-3">
-      {transportes.map((transporte) => (
-        <Card key={transporte.id} className="p-4">
-          <div className="flex justify-between items-start">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
-                <Bus className="w-4 h-4 text-[#00D4D4]" />
-                <span className="font-semibold">{transporte.tipo_transporte}</span>
-                {transporte.proveedor && (
-                  <span className="text-sm text-gray-500">• {transporte.proveedor}</span>
-                )}
-              </div>
-              
-              <div className="text-sm space-y-1">
-                <p className="font-medium">{transporte.origen} → {transporte.destino}</p>
-                <p className="text-gray-600">
-                  Fecha: {transporte.fecha_servicio} {transporte.hora && `• ${transporte.hora}`}
-                </p>
-                <p className="text-gray-600">
-                  Capacidad: {transporte.capacidad_pasajeros} pasajero(s)
-                </p>
-              </div>
-            </div>
-            
-            <div className="text-right ml-4">
-              <div className="mb-2">
-                <p className="text-xs text-gray-500">Base</p>
-                <p className="font-medium">${transporte.costo_total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
-              </div>
-              <div className="mb-2">
-                <p className="text-xs text-gray-500">Comisión</p>
-                <p className="font-medium text-green-600">+${transporte.comision_transporte.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
-              </div>
-              <div className="mb-3">
-                <p className="text-xs text-gray-500">Total</p>
-                <p className="font-bold text-lg text-[#00D4D4]">
-                  ${transporte.total_con_comision.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onEliminar(transporte.id)}
-                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
+export function TransportesLista({ items, onEliminar }: { items: TransporteItem[], onEliminar: (id: string) => void }) {
+    if (items.length === 0) {
+      return (
+        <Card className="p-6 text-center text-gray-500 border-dashed bg-gray-50/50 mb-6">
+          <Bus className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+          <p>No hay transportes agregados</p>
         </Card>
-      ))}
+      );
+    }
+  
+    return (
+      <div className="space-y-3 mb-6">
+        {items.map((t) => (
+          <Card key={t.id} className="p-4 hover:border-[#00D4D4] transition-all group">
+            <div className="flex justify-between">
+                <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                        <Bus className="w-5 h-5 text-[#00D4D4]" />
+                        <span className="font-bold text-slate-700 uppercase">{t.tipo_transporte}</span>
+                        {t.proveedor && <span className="text-sm text-slate-500">• {t.proveedor}</span>}
+                    </div>
+                    <p className="text-base font-medium text-slate-800 ml-7">{t.descripcion}</p>
+                    {(t.origen || t.destino) && (
+                        <p className="text-sm text-gray-500 ml-7 flex items-center gap-1 mt-1">
+                           <MapPin className="w-3 h-3"/> {t.origen} → {t.destino} ({t.capacidad_pasajeros} pax)
+                        </p>
+                    )}
+                </div>
 
-      {/* Totales generales */}
-      <Card className="p-4 bg-gray-50">
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <p className="text-sm text-gray-600">Total transportes</p>
-            <p className="text-lg font-bold">${totalTransportes.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-600">Total comisiones</p>
-            <p className="text-lg font-bold text-green-600">${totalComisiones.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-600">Total general</p>
-            <p className="text-xl font-bold text-[#00D4D4]">${totalGeneral.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
-          </div>
-        </div>
-      </Card>
-    </div>
-  );
+                <div className="text-right flex flex-col justify-between min-w-[120px]">
+                    <div>
+                        <p className="text-xs text-slate-500 mb-1">Precio Venta</p>
+                        <p className="font-bold text-lg text-[#00D4D4]">
+                            ${t.precio_venta_total.toLocaleString('es-MX', {minimumFractionDigits: 2})}
+                        </p>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => onEliminar(t.id)} className="text-red-500 opacity-0 group-hover:opacity-100 transition-opacity h-8 px-2 self-end">
+                        <X className="w-4 h-4 mr-1" /> Eliminar
+                    </Button>
+                </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+    );
 }

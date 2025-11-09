@@ -8,11 +8,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card } from "@/components/ui/card"
-//import { VueloForm, VuelosLista } from '@/components/cotizaciones/VueloForm';
-// Agrega HotelForm y HotelesLista a tus imports
-import { VueloForm, VuelosLista, type Vuelo } from '@/components/cotizaciones/VueloForm';
-import { HotelForm, HotelesLista, type HotelItem } from '@/components/cotizaciones/HotelForm';
-import { TourForm, ToursLista, type Tour } from '@/components/cotizaciones/TourForm';
 import {
   User,
   Users,
@@ -29,13 +24,20 @@ import {
   X,
   Plane,
   Ticket,
-  Trash2,
   Hotel,
   Bus,
   DollarSign,
+  ShieldCheck
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { api } from "@/lib/api"
+
+// ✅ IMPORTS DEFINITIVOS DE TUS NUEVOS COMPONENTES
+import { VueloForm, VuelosLista, type Vuelo } from '@/components/cotizaciones/VueloForm';
+import { HotelForm, HotelesLista, type HotelItem } from '@/components/cotizaciones/HotelForm';
+import { TourForm, ToursLista, type TourItem } from '@/components/cotizaciones/TourForm';
+import { TransporteForm, TransportesLista, type TransporteItem } from '@/components/cotizaciones/TransporteForm';
+import { SeguroForm, type SeguroData } from '@/components/cotizaciones/SeguroForm';
 
 const steps = [
   { id: 1, name: "Cliente", icon: User },
@@ -54,8 +56,6 @@ interface Cliente {
   apellido: string
   email: string
   telefono: string
-  ciudad?: string
-  estado?: string
 }
 
 interface Pasajero {
@@ -67,64 +67,6 @@ interface Pasajero {
   edad: number
   tipo_pasajero: 'adulto' | 'nino' | 'infante'
   genero: 'masculino' | 'femenino' | 'otro'
-}
-
-interface Vuelo {
-  aerolinea: string
-  numero_vuelo: string
-  origen: string
-  destino: string
-  fecha_salida: string
-  hora_salida: string
-  fecha_llegada: string // Ya existía
-  hora_llegada: string // Ya existía
-  tiene_escala: boolean
-  duracion_vuelo: string
-  duracion_escala: string
-  costo_por_persona: number
-  precio_venta_por_persona: number // <-- AÑADIDO
-  comision_vuelo: number // <-- AÑADIDO
-  clase: string // <-- AÑADIDO
-  incluye_equipaje_mano: boolean // <-- AÑADIDO
-  incluye_equipaje_documentado: boolean // <-- AÑADIDO
-  incluye_seleccion_asiento: boolean // <-- AÑADIDO
-  incluye_tua: boolean // <-- AÑADIDO
-  notas: string // <-- AÑADIDO
-  total_con_comision?: number;
-}
-
-interface HotelItem {
-  nombre: string
-  num_habitaciones: number
-  tipo_habitacion: string
-  incluye: string
-  fecha_checkin: string
-  fecha_checkout: string
-  num_noches: number
-  costo_total: number
-  precio_venta_total: number // <-- AÑADIDO
-  comision_hotel: number // <-- AÑADIDO
-}
-
-interface Transportacion {
-  tipo: string
-  descripcion: string
-  fecha: string
-  costo_total: number
-  precio_venta_total: number // <-- AÑADIDO
-  comision_transporte: number // <-- AÑADIDO
-  proveedor: string // <-- AÑADIDO
-  notas: string // <-- AÑADIDO
-}
-
-interface Seguro {
-  aseguradora: string
-  tipo_cobertura: string
-  monto_cobertura: number
-  costo_total: number
-  precio_venta_total: number
-  comision: number
-  notas: string
 }
 
 export default function NewQuotationPage() {
@@ -141,8 +83,6 @@ export default function NewQuotationPage() {
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [pasajeros, setPasajeros] = useState<Pasajero[]>([])
   const [selectedPasajeros, setSelectedPasajeros] = useState<number[]>([])
-
-  const totalPasajerosReal = 1 + selectedPasajeros.length;
 
   const [newCliente, setNewCliente] = useState({
     nombre: "",
@@ -165,132 +105,36 @@ export default function NewQuotationPage() {
     descripcion_general: "",
   })
 
+  // ✅ ESTADOS PARA LOS SERVICIOS
   const [vuelos, setVuelos] = useState<Vuelo[]>([])
-  const [newVuelo, setNewVuelo] = useState<Vuelo>({
-    aerolinea: "",
-    numero_vuelo: "",
-    origen: "",
-    destino: "",
-    fecha_salida: "",
-    hora_salida: "",
-    fecha_llegada: "",
-    hora_llegada: "",
-    tiene_escala: false,
-    duracion_vuelo: "",
-    duracion_escala: "",
-    costo_por_persona: 0,
-    precio_venta_por_persona: 0, // <-- AÑADIDO
-    comision_vuelo: 0, // <-- AÑADIDO
-    clase: "economica", // <-- AÑADIDO (default)
-    incluye_equipaje_mano: true, // <-- AÑADIDO (default)
-    incluye_equipaje_documentado: false, // <-- AÑADIDO (default)
-    incluye_seleccion_asiento: false, // <-- AÑADIDO (default)
-    incluye_tua: true, // <-- AÑADIDO (default)
-    notas: "", // <-- AÑADIDO
-  })
-
   const [hoteles, setHoteles] = useState<HotelItem[]>([])
-  // REEMPLAZA este estado (aprox. línea 173)
-  const [newHotel, setNewHotel] = useState<HotelItem>({
-    nombre: "",
-    num_habitaciones: 1,
-    tipo_habitacion: "doble",
-    incluye: "desayuno",
-    fecha_checkin: "",
-    fecha_checkout: "",
-    num_noches: 0,
-    costo_total: 0,
-    precio_venta_total: 0, // <-- AÑADIDO
-    comision_hotel: 0, // <-- AÑADIDO
-  })
-
-  const [tours, setTours] = useState<Tour[]>([])
-  const [newTour, setNewTour] = useState<Tour>({
-    nombre: "",
-    descripcion: "",
-    fecha: "",
-    hora_inicio: "",
-    duracion_horas: 0,
-    costo_por_persona: 0,
-    precio_venta_por_persona: 0, // <-- AÑADIDO
-    comision_tour: 0, // <-- AÑADIDO
-    proveedor: "", // <-- AÑADIDO
-    incluye: "",
-    notas: "", // <-- AÑADIDO
-  })
-
-  const [transportaciones, setTransportaciones] = useState<Transportacion[]>([])
-  const [newTransportacion, setNewTransportacion] = useState<Transportacion>({
-    tipo: "terrestre",
-    descripcion: "",
-    fecha: "",
-    costo_total: 0,
-    precio_venta_total: 0, // <-- AÑADIDO
-    comision_transporte: 0, // <-- AÑADIDO
-    proveedor: "", // <-- AÑADIDO
-    notas: "", // <-- AÑADIDO
-  })
-
-  const [costosData, setCostosData] = useState({
-    otros_costos: 0,
-  })
-
-  const [seguroData, setSeguroData] = useState<Seguro>({
-    aseguradora: "",
-    tipo_cobertura: "Viaje completo",
-    monto_cobertura: 50000,
-    costo_total: 0,
-    precio_venta_total: 0,
+  const [tours, setTours] = useState<TourItem[]>([])
+  const [transportes, setTransportes] = useState<TransporteItem[]>([])
+  const [seguro, setSeguro] = useState<SeguroData>({
+    aseguradora: '',
+    tipo_cobertura: '',
+    costo_neto: 0,
     comision: 0,
-    notas: "",
+    precio_venta: 0,
+    costo_total: 0,
+    precio_venta_total: 0
   })
-
-  // CAMBIO: Comisión en MONTO fijo, no porcentaje
+  const [costosData, setCostosData] = useState({ otros_costos: 0 })
   const [comisionMonto, setComisionMonto] = useState<number>(0)
 
+  // UI Helpers
+  const [mostrarFormTransporte, setMostrarFormTransporte] = useState(false)
+
+  // --- EFECTOS DE CARGA ---
   useEffect(() => {
-    if (currentStep === 1) {
-      loadClientes()
-    }
+    if (currentStep === 1) loadClientes()
   }, [currentStep])
 
   useEffect(() => {
-    if (selectedClient && currentStep === 2) {
-      loadPasajeros(selectedClient.id)
-    }
+    if (selectedClient && currentStep === 2) loadPasajeros(selectedClient.id)
   }, [selectedClient, currentStep])
 
-  useEffect(() => {
-    if (destinoData.origen && destinoData.destino) {
-      setNewVuelo(prev => ({
-        ...prev,
-        origen: destinoData.origen,
-        destino: destinoData.destino,
-        fecha_salida: destinoData.fecha_salida,
-        fecha_llegada: destinoData.fecha_regreso,
-      }))
-    }
-  }, [destinoData])
-
-  useEffect(() => {
-    if (destinoData.fecha_salida && destinoData.fecha_regreso) {
-      setNewHotel(prev => ({
-        ...prev,
-        fecha_checkin: destinoData.fecha_salida,
-        fecha_checkout: destinoData.fecha_regreso,
-      }))
-    }
-  }, [destinoData])
-
-  useEffect(() => {
-    if (newHotel.fecha_checkin && newHotel.fecha_checkout) {
-      const checkin = new Date(newHotel.fecha_checkin)
-      const checkout = new Date(newHotel.fecha_checkout)
-      const noches = Math.ceil((checkout.getTime() - checkin.getTime()) / (1000 * 60 * 60 * 24))
-      setNewHotel(prev => ({ ...prev, num_noches: noches > 0 ? noches : 0 }))
-    }
-  }, [newHotel.fecha_checkin, newHotel.fecha_checkout])
-
+  // --- FUNCIONES DE CARGA DE DATOS ---
   const loadClientes = async () => {
     try {
       setIsLoading(true)
@@ -299,7 +143,6 @@ export default function NewQuotationPage() {
         setClientes(response.data)
       }
     } catch (err) {
-      console.error('Error cargando clientes:', err)
       setError('Error al cargar clientes')
     } finally {
       setIsLoading(false)
@@ -314,13 +157,13 @@ export default function NewQuotationPage() {
         setPasajeros(response.data)
       }
     } catch (err) {
-      console.error('Error cargando pasajeros:', err)
       setError('Error al cargar pasajeros')
     } finally {
       setIsLoading(false)
     }
   }
 
+  // --- MANEJADORES DE CLIENTE Y PASAJEROS ---
   const handleCreateCliente = async () => {
     try {
       setIsLoading(true)
@@ -349,124 +192,62 @@ export default function NewQuotationPage() {
     })
   }
 
-  // ✅ Función simplificada: Recibe el vuelo listo del componente VueloForm
-  const handleAgregarVuelo = (nuevoVuelo: Vuelo) => {
-    setVuelos([...vuelos, nuevoVuelo]);
+  // --- MANEJADORES DE SERVICIOS (NUEVOS COMPONENTES) ---
+  const handleAgregarVuelo = (nuevo: Vuelo) => setVuelos([...vuelos, nuevo]);
+  const handleEliminarVuelo = (id: string) => setVuelos(vuelos.filter(v => v.id !== id));
+
+  const handleAgregarHotel = (nuevo: HotelItem) => setHoteles([...hoteles, nuevo]);
+  const handleEliminarHotel = (id: string) => setHoteles(hoteles.filter(h => h.id !== id));
+
+  const handleAgregarTour = (nuevo: TourItem) => setTours([...tours, nuevo]);
+  const handleEliminarTour = (id: string) => setTours(tours.filter(t => t.id !== id));
+
+  const handleAgregarTransporte = (item: TransporteItem) => {
+    setTransportes([...transportes, item]);
+    setMostrarFormTransporte(false);
+  };
+  const handleEliminarTransporte = (id: string) => {
+    setTransportes(transportes.filter(t => t.id !== id));
   };
 
-  // ✅ Función corregida: Elimina por ID único, no por índice del array
-  const handleEliminarVuelo = (idToDelete: string) => {
-    setVuelos(vuelos.filter(v => v.id !== idToDelete));
-  };
-
-  // ✅ Función simplificada para agregar hoteles
-  const handleAgregarHotel = (nuevoHotel: HotelItem) => {
-    setHoteles([...hoteles, nuevoHotel]);
-  };
-
-  // ✅ Función corregida para eliminar por ID
-  const handleEliminarHotel = (idToDelete: string) => {
-    setHoteles(hoteles.filter(h => h.id !== idToDelete));
-  };
-
-  const handleAgregarTour = (nuevoTour: TourItem) => {
-    setTours([...tours, nuevoTour]);
-  };
-
-  const handleEliminarTour = (idToDelete: string) => {
-    setTours(tours.filter(t => t.id !== idToDelete));
-  };
-
-  const handleAddTransportacion = () => {
-    if (!newTransportacion.descripcion) {
-      setError('Completa descripción de la transportación')
-      return
-    }
-    // Permitir costo en cero
-    setTransportaciones([...transportaciones, { ...newTransportacion }])
-    setNewTransportacion({
-      tipo: "terrestre",
-      descripcion: "",
-      fecha: "",
-      costo_total: 0,
-      precio_venta_total: 0, // <-- AÑADIDO
-      comision_transporte: 0, // <-- AÑADIDO
-      proveedor: "", // <-- AÑADIDO
-      notas: "", // <-- AÑADIDO
-    })
-    setError(null)
-  }
-
-  const handleRemoveTransportacion = (index: number) => {
-    setTransportaciones(transportaciones.filter((_, i) => i !== index))
-  }
-
-  // REEMPLAZA la función antigua con esta:
-const calcularCostoVuelos = () => {
-  return vuelos.reduce((total, vuelo) => total + (vuelo.total_con_comision || 0), 0);
-}
-
-  const calcularCostoHoteles = () => {
-    return hoteles.reduce((total, hotel) => total + (hotel.precio_venta_total || 0), 0)
-  }
-
-  const calcularCostoTours = () => {
-    const numPasajeros = selectedPasajeros.length || 1
-    return tours.reduce((total, tour) => total + (tour.costo_por_persona * numPasajeros), 0)
-  }
-
-  const calcularCostoTransportacion = () => {
-    return transportaciones.reduce((total, t) => total + (t.costo_total || 0), 0)
-  }
-
-  const calcularCostoTotal = () => {
-    return calcularCostoVuelos() + 
-           calcularCostoHoteles() +
-           calcularCostoTours() +
-           calcularCostoTransportacion() +
-           (seguroData.costo_total || 0) + // <-- CORREGIDO
-           (costosData.otros_costos || 0)
-  }
-
+  // --- CÁLCULOS FINANCIEROS ---
   const calcularPrecioFinal = () => {
-    // 1. Vuelos (usa 'total_con_comision')
-    const totalVuelos = vuelos.reduce((sum, v) => sum + (Number(v.total_con_comision) || 0), 0);
-    
-    // 2. Hoteles (usa 'precio_venta_total')
-    const totalHoteles = hoteles.reduce((sum, h) => sum + (Number(h.precio_venta_total) || 0), 0);
-    
-    // 3. Tours (✅ CORREGIDO: usa 'precio_venta_total' directamente)
-    const totalTours = tours.reduce((sum, t) => sum + (Number(t.precio_venta_total) || 0), 0);
-    
-    // 4. Transportes (usa la lógica antigua por ahora)
-    const totalTransportes = transportaciones.reduce((sum, tr) => sum + (Number(tr.costo_total) || 0), 0);
-    
-    // 5. Seguros y Otros
-    const totalSeguros = Number(seguroData.precio_venta_total) || 0;
-    const totalOtros = Number(costosData.otros_costos) || 0;
+    const totalVuelos = vuelos.reduce((sum, v) => sum + (v.total_con_comision || 0), 0);
+    const totalHoteles = hoteles.reduce((sum, h) => sum + (h.precio_venta_total || 0), 0);
+    const totalTours = tours.reduce((sum, t) => sum + (t.precio_venta_total || 0), 0);
+    const totalTransportes = transportes.reduce((sum, t) => sum + (t.precio_venta_total || 0), 0);
+    const totalSeguros = seguro.precio_venta_total || 0;
+    const totalOtros = costosData.otros_costos || 0;
+    const comisionExtra = comisionMonto || 0;
 
-    return totalVuelos + totalHoteles + totalTours + totalTransportes + totalSeguros + totalOtros;
+    return totalVuelos + totalHoteles + totalTours + totalTransportes + totalSeguros + totalOtros + comisionExtra;
   }
 
+  const calcularCostoNetoTotal = () => {
+    return (
+      vuelos.reduce((sum, v) => sum + (v.costo_total || 0), 0) +
+      hoteles.reduce((sum, h) => sum + (h.costo_total || 0), 0) +
+      tours.reduce((sum, t) => sum + (t.costo_total || 0), 0) +
+      transportes.reduce((sum, t) => sum + (t.costo_total || 0), 0) + // Corregido: usa costo_total (no costo_neto, para estandarizar)
+      (seguro.costo_total || 0) +
+      (costosData.otros_costos || 0)
+    );
+  }
+
+  // --- FILTRADO DE CLIENTES ---
   const filteredClients = clientes.filter(client => {
     const fullName = `${client.nombre} ${client.apellido}`.toLowerCase()
-    return fullName.includes(searchQuery.toLowerCase()) || 
+    return fullName.includes(searchQuery.toLowerCase()) ||
            client.email.toLowerCase().includes(searchQuery.toLowerCase())
   })
 
+  // --- NAVEGACIÓN ---
   const handleNext = () => {
-    if (currentStep === 1 && !selectedClient) {
-      setError('Selecciona o crea un cliente primero')
-      return
-    }
-    if (currentStep === 2 && selectedPasajeros.length === 0) {
-      setError('Selecciona al menos un pasajero')
-      return
-    }
-    if (currentStep === 3 && (!destinoData.origen || !destinoData.destino || !destinoData.fecha_salida || !destinoData.fecha_regreso)) {
-      setError('Completa todos los campos de destino')
-      return
-    }
+    if (currentStep === 1 && !selectedClient) { setError('Selecciona un cliente'); return; }
+    if (currentStep === 2 && selectedPasajeros.length === 0) { setError('Selecciona al menos un pasajero'); return; }
+    if (currentStep === 3 && (!destinoData.origen || !destinoData.destino)) { setError('Completa destino y origen'); return; }
+    if (currentStep === 3 && (!destinoData.fecha_salida || !destinoData.fecha_regreso)) { setError('Completa las fechas'); return; }
+    
     if (currentStep < 8) {
       setError(null)
       setCurrentStep(currentStep + 1)
@@ -477,391 +258,125 @@ const calcularCostoVuelos = () => {
     if (currentStep > 1) setCurrentStep(currentStep - 1)
   }
 
-  // REEMPLAZA TODA LA FUNCIÓN handleSaveCotizacion (líneas 528-874) CON ESTO:
-
+  // ====================================================================
+  // 💾 GUARDAR COTIZACIÓN
+  // ====================================================================
   const handleSaveCotizacion = async () => {
-  // ==========================================
-  // VALIDACIONES INICIALES
-  // ==========================================
-  if (!selectedClient) {
-    setError('Selecciona un cliente')
-    return
-  }
+    if (!selectedClient) return;
 
-  if (selectedPasajeros.length === 0) {
-    setError('Selecciona al menos un pasajero')
-    return
-  }
+    try {
+      setIsLoading(true)
+      setError(null)
 
-  if (!destinoData.origen || !destinoData.destino) {
-    setError('Completa el origen y destino del viaje')
-    return
-  }
-
-  if (!destinoData.fecha_salida || !destinoData.fecha_regreso) {
-    setError('Completa las fechas del viaje')
-    return
-  }
-
-  try {
-    setIsSaving(true)
-    setError(null)
-
-    // ==========================================
-    // CALCULAR CONTADORES DE PASAJEROS POR TIPO
-    // ==========================================
-    const pasajerosSeleccionados = pasajeros.filter(p => selectedPasajeros.includes(p.id))
-    const num_adultos = pasajerosSeleccionados.filter(p => p.tipo_pasajero === 'adulto').length
-    const num_ninos = pasajerosSeleccionados.filter(p => p.tipo_pasajero === 'nino').length
-    const num_infantes = pasajerosSeleccionados.filter(p => p.tipo_pasajero === 'infante').length
-
-    // ==========================================
-    // VUELOS - Según cotizacion_vuelos
-    // ==========================================
-    const vuelosPayload = vuelos.map(v => {
-      // Obtenemos los valores del formulario
-      const costoUnitario = Number(v.costo_por_persona) || 0
-      const precioVentaUnitario = Number(v.precio_venta_por_persona) || costoUnitario // Si no hay precio, es igual al costo
-      const comisionUnitario = Number(v.comision_vuelo) || 0
-      const totalPasajeros = selectedPasajeros.length || 1
+      // Contadores de pasajeros
+      // NOTA: Esto asume que tienes el objeto completo en 'pasajeros' para filtrar por tipo.
+      // Si solo tienes IDs en 'selectedPasajeros', necesitamos buscar en el array completo.
+      const paxSeleccionadosObjects = pasajeros.filter(p => selectedPasajeros.includes(p.id));
       
-      // Calculamos totales y utilidad
-      const costoTotal = costoUnitario * totalPasajeros
-      const precioVentaTotal = precioVentaUnitario * totalPasajeros
-      const utilidadVuelo = (precioVentaUnitario - costoUnitario) * totalPasajeros
-      
-      // Formateo de notas (incluye info extra del formulario)
-      let notasVuelo = v.notas || ''
-      if (v.numero_vuelo) notasVuelo += `\nNum Vuelo: ${v.numero_vuelo}`
-      if (v.duracion_vuelo) notasVuelo += `\nDuración: ${v.duracion_vuelo}`
-      if (v.tiene_escala && v.duracion_escala) notasVuelo += `\nEscala: ${v.duracion_escala}`
+      const num_adultos = 1 + paxSeleccionadosObjects.filter(p => p.tipo_pasajero === 'adulto').length;
+      const num_ninos = paxSeleccionadosObjects.filter(p => p.tipo_pasajero === 'nino').length;
+      const num_infantes = paxSeleccionadosObjects.filter(p => p.tipo_pasajero === 'infante').length;
+      const totalPasajeros = 1 + selectedPasajeros.length;
 
-      return {
-        // Campos básicos
-        aerolinea: v.aerolinea || '',
-        ruta: `${v.origen || destinoData.origen} → ${v.destino || destinoData.destino}`,
-        fecha_salida: v.fecha_salida || destinoData.fecha_salida,
-        hora_salida: v.hora_salida || '00:00:00', 
-        fecha_regreso: v.fecha_llegada || destinoData.fecha_regreso, 
-        hora_regreso: v.hora_llegada || '00:00:00', 
-        clase: v.clase || 'economica',
-        num_pasajeros: totalPasajeros,
-        
-        // --- Costos y precios CORREGIDOS ---
-        costo_unitario: costoUnitario,
-        costo_total: costoTotal,
-        precio_venta_unitario: precioVentaUnitario,
-        precio_venta_total: precioVentaTotal,
-        comision_vuelo: comisionUnitario * totalPasajeros, // Comisión total
-        utilidad: utilidadVuelo,
-        
-        // --- Servicios CORREGIDOS ---
-        incluye_equipaje_mano: v.incluye_equipaje_mano ? 1 : 0,
-        incluye_equipaje_documentado: v.incluye_equipaje_documentado ? 1 : 0,
-        kg_equipaje_documentado: 0, 
-        piezas_equipaje_documentado: 0, 
-        incluye_seleccion_asiento: v.incluye_seleccion_asiento ? 1 : 0,
-        incluye_tua: v.incluye_tua ? 1 : 0,
-        notas: notasVuelo.trim() 
-      }
-    })
+      // Totales
+      const costo_total_neto = calcularCostoNetoTotal();
+      const precio_venta_final = calcularPrecioFinal();
+      const utilidad_total = precio_venta_final - costo_total_neto;
 
-    // ==========================================
-    // HOTELES - Según cotizacion_hoteles
-    // ==========================================
-    const hotelesPayload = hoteles.map(h => {
-      // Obtenemos los valores del formulario
-      const costoTotal = Number(h.costo_total) || 0
-      const precioVentaTotal = Number(h.precio_venta_total) || costoTotal // Si no hay precio, es igual al costo
-      const comision = Number(h.comision_hotel) || 0
-      const noches = Number(h.num_noches) || 1
-      
-      // Calculamos la utilidad
-      const utilidadHotel = precioVentaTotal - costoTotal
+      // Comisiones
+      const monto_comision_total = 
+        vuelos.reduce((sum, v) => sum + (v.comision_vuelo || 0), 0) + // VueloForm ya entrega la comisión total del vuelo
+        hoteles.reduce((sum, h) => sum + (h.comision_hotel || 0), 0) +
+        tours.reduce((sum, t) => sum + (t.comision_tour || 0), 0) +
+        transportes.reduce((sum, t) => sum + (t.comision_transporte || 0), 0) +
+        (seguro.comision || 0) +
+        comisionMonto;
 
-      // Calculamos los valores por noche
-      const costoPorNoche = costoTotal / noches
-      const precioVentaPorNoche = precioVentaTotal / noches
-      
-      // Calculamos los valores por persona 
-      const totalPasajeros = selectedPasajeros.length || 1
-      const precioVentaPorPersona = precioVentaTotal / totalPasajeros
+      const userStr = localStorage.getItem('user');
+      const agente_id = userStr ? JSON.parse(userStr).id : 1;
 
-      return {
-        // Campos básicos
-        nombre_hotel: h.nombre || '',
-        destino: destinoData.destino,
-        tipo_habitacion: h.tipo_habitacion || 'Doble',
-        fecha_checkin: h.fecha_checkin || destinoData.fecha_salida,
-        fecha_checkout: h.fecha_checkout || destinoData.fecha_regreso,
-        num_noches: noches,
-        num_habitaciones: Number(h.num_habitaciones) || 1,
-        num_personas: totalPasajeros,
-        plan_alimentacion: h.incluye || 'Sin alimentos',
-        
-        // --- Costos y precios CORREGIDOS ---
-        costo_por_noche: costoPorNoche,
-        costo_total: costoTotal,
-        precio_venta_por_noche: precioVentaPorNoche,
-        precio_venta_total: precioVentaTotal,
-        precio_venta_por_persona: precioVentaPorPersona, 
-        comision_hotel: comision,
-        utilidad: utilidadHotel,
-        notas: ''
-      }
-    })
+      // Preparar Payloads para la BD
+      const hotelesPayload = hoteles.map(h => ({ ...h, num_personas: totalPasajeros }));
+      const toursPayload = tours.map(t => ({ ...t, num_personas: t.cantidad_adultos + t.cantidad_ninos }));
+      const transportesPayload = transportes.map(tr => ({
+        ...tr, // Enviamos todo el objeto, el backend tomará lo que necesita
+        fecha_servicio: destinoData.fecha_salida, // Default si no se capturó
+        num_pasajeros: tr.capacidad_pasajeros,
+        num_dias: 1
+      }));
+      const segurosPayload = (seguro.precio_venta_total > 0) ? [{
+        ...seguro,
+        fecha_inicio: destinoData.fecha_salida,
+        fecha_fin: destinoData.fecha_regreso,
+        num_personas: totalPasajeros
+      }] : [];
 
-    // ==========================================
-    // TOURS - Según cotizacion_tours
-    // ==========================================
-    const toursPayload = tours.map(t => {
-      // Obtenemos los valores del formulario
-      const costoUnitario = Number(t.costo_por_persona) || 0
-      const precioVentaUnitario = Number(t.precio_venta_por_persona) || costoUnitario // Si no hay precio, es igual al costo
-      const comisionUnitario = Number(t.comision_tour) || 0
-      const totalPasajeros = selectedPasajeros.length || 1
-      
-      // Calculamos totales y utilidad
-      const costoTotal = costoUnitario * totalPasajeros
-      const precioVentaTotal = precioVentaUnitario * totalPasajeros
-      const comisionTotal = comisionUnitario * totalPasajeros
-      const utilidadTotal = (precioVentaUnitario - costoUnitario) * totalPasajeros
-      
-      // Combinamos las notas
-      let notasTour = t.notas || ''
-      if (t.descripcion) notasTour = `${t.descripcion}\n${notasTour}`.trim()
-
-      return {
-        // Campos básicos
-        nombre_tour: t.nombre || '',
-        proveedor: t.proveedor || 'No especificado', 
-        destino: destinoData.destino,
-        fecha_tour: t.fecha || destinoData.fecha_salida,
-        duracion: `${t.duracion_horas || 0} horas`, 
-        num_personas: totalPasajeros,
-        incluye: t.incluye || 'N/A', 
-        
-        // --- Costos y precios CORREGIDOS ---
-        costo_por_persona: costoUnitario,
-        costo_total: costoTotal,
-        precio_venta_por_persona: precioVentaUnitario,
-        precio_venta_total: precioVentaTotal,
-        comision_tour: comisionTotal,
-        utilidad: utilidadTotal,
-        notas: notasTour 
-      }
-    })
-
-    // ==========================================
-    // TRANSPORTES - Según cotizacion_transportes
-    // ==========================================
-    const transportesPayload = transportaciones.map(tr => {
-      // Obtenemos valores
-      const costoTotal = Number(tr.costo_total) || 0
-      const precioVentaTotal = Number(tr.precio_venta_total) || costoTotal
-      const comision = Number(tr.comision_transporte) || 0
-      const utilidad = precioVentaTotal - costoTotal
-      
-      // Combinamos notas
-      let notasTransporte = tr.notas || ''
-      if (tr.descripcion) notasTransporte = `${tr.descripcion}\n${notasTransporte}`.trim()
-      
-      return {
-        // Campos básicos
-        tipo_transporte: tr.tipo || 'terrestre',
-        proveedor: tr.proveedor || 'No especificado', 
+      // Payload Principal
+      const cotizacionData = {
+        cliente_id: selectedClient.id,
+        agente_id: agente_id,
         origen: destinoData.origen,
         destino: destinoData.destino,
-        fecha_servicio: tr.fecha || destinoData.fecha_salida,
-        num_pasajeros: selectedPasajeros.length || 1,
-        num_dias: 1, // Asumido
+        fecha_salida: destinoData.fecha_salida,
+        fecha_regreso: destinoData.fecha_regreso,
+        tipo_viaje: destinoData.tipo_viaje,
+        num_adultos, num_ninos, num_infantes,
+        num_pasajeros_total: totalPasajeros,
+        descripcion_general: destinoData.descripcion_general,
         
-        // --- Costos y precios CORREGIDOS ---
-        costo_total: costoTotal,
-        precio_venta_total: precioVentaTotal,
-        comision_transporte: comision,
-        utilidad: utilidad,
-        notas: notasTransporte 
+        // Totales Financieros
+        costo_total: costo_total_neto,
+        utilidad: utilidad_total,
+        precio_venta_final: precio_venta_final,
+        monto_comision: monto_comision_total,
+        
+        // Desgloses (Opcional si tu BD los usa)
+        costo_vuelos: vuelos.reduce((sum, v) => sum + v.costo_total, 0),
+        costo_hoteles: hoteles.reduce((sum, h) => sum + h.costo_total, 0),
+        costo_tours: tours.reduce((sum, t) => sum + t.costo_total, 0),
+        costo_transportes: transportes.reduce((sum, t) => sum + t.costo_total, 0),
+        costo_seguros: seguro.costo_total || 0,
+        otros_costos: costosData.otros_costos || 0,
+
+        estado: 'cotizacion',
+        estado_pago: 'pendiente',
+        paso_actual: 8,
+        cotizacion_completa: 1,
+        pasajeros_ids: selectedPasajeros,
+        
+        // Arrays de Servicios
+        vuelos, 
+        hoteles: hotelesPayload, 
+        tours: toursPayload, 
+        transportes: transportesPayload, 
+        seguros: segurosPayload,
       }
-    })
 
-    // ==========================================
-    // SEGUROS - Según cotizacion_seguros
-    // ==========================================
-    const costoSeguro = Number(seguroData.costo_total) || 0
-    const precioVentaSeguro = Number(seguroData.precio_venta_total) || costoSeguro
-    const comisionSeguro = Number(seguroData.comision) || 0
-    const utilidadSeguro = precioVentaSeguro - costoSeguro
-    const totalPasajerosSeguro = selectedPasajeros.length || 1
-    
-    const segurosPayload = costoSeguro > 0 || precioVentaSeguro > 0 ? [{
-      // Campos básicos
-      aseguradora: seguroData.aseguradora || 'No especificado',
-      tipo_cobertura: seguroData.tipo_cobertura || 'Viaje completo',
-      fecha_inicio: destinoData.fecha_salida,
-      fecha_fin: destinoData.fecha_regreso,
-      num_personas: totalPasajerosSeguro,
-      monto_cobertura: Number(seguroData.monto_cobertura) || 50000,
-      
-      // --- Costos y precios CORREGIDOS ---
-      costo_por_persona: costoSeguro / totalPasajerosSeguro,
-      costo_total: costoSeguro,
-      precio_venta_por_persona: precioVentaSeguro / totalPasajerosSeguro,
-      precio_venta_total: precioVentaSeguro,
-      comision: comisionSeguro,
-      utilidad: utilidadSeguro,
-      notas: seguroData.notas || ''
-    }] : []
-    
-    // Guardamos el costo para el payload principal
-    const costo_seguros_calc = costoSeguro
+      console.log('Enviando cotización:', cotizacionData);
+      const response = await api.cotizaciones.create(cotizacionData)
 
-    // ==========================================
-    // CALCULAR COSTOS TOTALES (NUEVA LÓGICA)
-    // ==========================================
-    
-    // --- COSTOS ---
-    const costo_vuelos_calc = calcularCostoVuelos()
-    const costo_hoteles_calc = calcularCostoHoteles()
-    const costo_tours_calc = calcularCostoTours()
-    const costo_transportes_calc = calcularCostoTransportacion()
-    // (costo_seguros_calc se definió arriba)
-    
-    // Suma de todos los costos netos
-    const costo_total_calc = costo_vuelos_calc + 
-                             costo_hoteles_calc + 
-                             costo_tours_calc + 
-                             costo_transportes_calc + 
-                             costo_seguros_calc + 
-                             (Number(costosData.otros_costos) || 0)
+      if (response.success) {
+        setShowSuccess(true)
+        setTimeout(() => router.push('/cotizaciones'), 2000)
+      } else {
+        throw new Error(response.error || 'Error al crear cotización')
+      }
 
-    // --- PRECIOS DE VENTA ---
-    const precio_vuelos_calc = vuelos.reduce((total, v) => total + (v.precio_venta_por_persona * (selectedPasajeros.length || 1)), 0)
-    const precio_hoteles_calc = hoteles.reduce((total, h) => total + (h.precio_venta_total || 0), 0)
-    const precio_tours_calc = tours.reduce((total, t) => total + (t.precio_venta_por_persona * (selectedPasajeros.length || 1)), 0)
-    const precio_transportes_calc = transportaciones.reduce((total, tr) => total + (tr.precio_venta_total || 0), 0)
-    const precio_seguros_calc = seguroData.precio_venta_total || 0
-    
-    // Suma de todos los precios de venta + otros costos (que se pasan directo)
-    const precio_venta_final_calc = precio_vuelos_calc + 
-                                    precio_hoteles_calc + 
-                                    precio_tours_calc + 
-                                    precio_transportes_calc + 
-                                    precio_seguros_calc +
-                                    (Number(costosData.otros_costos) || 0)
-
-    // --- UTILIDAD ---
-    // Utilidad total (Venta Final - Costo Total)
-    const utilidad_total_calc = precio_venta_final_calc - costo_total_calc
-
-    // --- COMISIÓN ---
-    // Suma de todas las comisiones granulares
-    const comision_vuelos = vuelos.reduce((sum, v) => sum + (v.comision_vuelo * (selectedPasajeros.length || 1)), 0)
-    const comision_hoteles = hoteles.reduce((sum, h) => sum + h.comision_hotel, 0)
-    const comision_tours = tours.reduce((sum, t) => sum + (t.comision_tour * (selectedPasajeros.length || 1)), 0)
-    const comision_transportes = transportaciones.reduce((sum, tr) => sum + tr.comision_transporte, 0)
-    const comision_seguros = seguroData.comision
-    
-    const monto_comision_total_calc = comision_vuelos + 
-                                      comision_hoteles + 
-                                      comision_tours + 
-                                      comision_transportes + 
-                                      comision_seguros
-
-    // Obtener agente_id del usuario autenticado
-    const userStr = localStorage.getItem('user')
-    const user = userStr ? JSON.parse(userStr) : null
-    const agente_id = user?.id || 1
-
-
-    // ==========================================
-    // PAYLOAD PRINCIPAL - Tabla cotizaciones
-    // ==========================================
-    const cotizacionData = {
-      // IDs principales
-      cliente_id: selectedClient.id,
-      agente_id: agente_id,
-      
-      // Destino
-      origen: destinoData.origen,
-      destino: destinoData.destino,
-      fecha_salida: destinoData.fecha_salida,
-      fecha_regreso: destinoData.fecha_regreso,
-      
-      // Tipo y contadores
-      tipo_viaje: destinoData.tipo_viaje || "individual",
-      num_adultos: num_adultos,
-      num_ninos: num_ninos,
-      num_infantes: num_infantes,
-      num_pasajeros_total: selectedPasajeros.length,
-      
-      // Descripción
-      descripcion_general: destinoData.descripcion_general || `Viaje a ${destinoData.destino}`,
-      notas_internas: "",
-      
-      // --- CAMPOS CORREGIDOS ---
-      // Costos desglosados
-      costo_vuelos: costo_vuelos_calc,
-      costo_hoteles: costo_hoteles_calc,
-      costo_transportes: costo_transportes_calc,
-      costo_tours: costo_tours_calc,
-      costo_seguros: costo_seguros_calc,
-      otros_costos: Number(costosData.otros_costos) || 0,
-      
-      // Total y utilidad
-      costo_total: costo_total_calc,
-      utilidad: utilidad_total_calc,
-      precio_venta_final: precio_venta_final_calc,
-      
-      // Comisión
-      monto_comision: monto_comision_total_calc,
-      // --- FIN DE CAMPOS CORREGIDOS ---
-      
-      // Estados
-      estado: 'cotizacion',
-      estado_pago: 'pendiente',
-      paso_actual: 8,
-      cotizacion_completa: 1,
-      
-      // Pasajeros
-      pasajeros_ids: selectedPasajeros,
-      
-      // Arrays de servicios
-      vuelos: vuelosPayload,
-      hoteles: hotelesPayload,
-      tours: toursPayload,
-      transportes: transportesPayload,
-      seguros: segurosPayload,
+    } catch (error: any) {
+      console.error('Error al guardar:', error);
+      setError(error.message || 'Error al guardar la cotización')
+    } finally {
+      setIsLoading(false)
+      setIsSaving(false)
     }
-
-    console.log('=== PAYLOAD FINAL COMPLETO ===')
-    console.log(JSON.stringify(cotizacionData, null, 2))
-
-    // Enviar al backend
-    const response = await api.cotizaciones.create(cotizacionData)
-    
-    console.log('=== RESPUESTA DEL BACKEND ===')
-    console.log(response)
-
-    if (response.success) {
-      setShowSuccess(true)
-      setTimeout(() => {
-        router.push('/cotizaciones')
-      }, 2000)
-    } else {
-      throw new Error(response.error || 'Error al crear cotización')
-    }
-
-  } catch (error: any) {
-    console.error('❌ ERROR COMPLETO:', error)
-    setError(error.message || 'Error al guardar la cotización')
-  } finally {
-    setIsSaving(false)
   }
-}
 
+  // ====================================================================
+  // RENDERIZADO DE LOS PASOS (WIZARD)
+  // ====================================================================
   const renderStepContent = () => {
     switch (currentStep) {
+      // --- PASO 1: CLIENTE ---
       case 1:
         return (
           <div className="space-y-6">
@@ -869,9 +384,7 @@ const calcularCostoVuelos = () => {
               <button
                 onClick={() => setClientType("existing")}
                 className={`px-6 py-3 rounded-lg font-medium transition-colors ${
-                  clientType === "existing"
-                    ? "bg-[#00D4D4] text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  clientType === "existing" ? "bg-[#00D4D4] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >
                 Cliente Existente
@@ -879,9 +392,7 @@ const calcularCostoVuelos = () => {
               <button
                 onClick={() => setClientType("new")}
                 className={`px-6 py-3 rounded-lg font-medium transition-colors ${
-                  clientType === "new"
-                    ? "bg-[#00D4D4] text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  clientType === "new" ? "bg-[#00D4D4] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >
                 Nuevo Cliente
@@ -900,11 +411,8 @@ const calcularCostoVuelos = () => {
                     className="pl-10"
                   />
                 </div>
-
                 {isLoading ? (
-                  <div className="flex justify-center py-8">
-                    <Loader2 className="w-8 h-8 animate-spin text-[#00D4D4]" />
-                  </div>
+                  <div className="flex justify-center py-8"><Loader2 className="w-8 h-8 animate-spin text-[#00D4D4]" /></div>
                 ) : (
                   <div className="grid gap-3 max-h-96 overflow-y-auto">
                     {filteredClients.map((client) => (
@@ -912,22 +420,15 @@ const calcularCostoVuelos = () => {
                         key={client.id}
                         onClick={() => setSelectedClient(client)}
                         className={`p-4 rounded-lg border-2 text-left transition-all ${
-                          selectedClient?.id === client.id
-                            ? "border-[#00D4D4] bg-[#00D4D4]/5"
-                            : "border-gray-200 hover:border-[#00D4D4]/50"
+                          selectedClient?.id === client.id ? "border-[#00D4D4] bg-[#00D4D4]/5" : "border-gray-200 hover:border-[#00D4D4]/50"
                         }`}
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <p className="font-semibold text-gray-900">
-                              {client.nombre} {client.apellido}
-                            </p>
+                            <p className="font-semibold text-gray-900">{client.nombre} {client.apellido}</p>
                             <p className="text-sm text-gray-600">{client.email}</p>
-                            <p className="text-sm text-gray-500">{client.telefono}</p>
                           </div>
-                          {selectedClient?.id === client.id && (
-                            <Check className="w-6 h-6 text-[#00D4D4] flex-shrink-0" />
-                          )}
+                          {selectedClient?.id === client.id && <Check className="w-6 h-6 text-[#00D4D4] flex-shrink-0" />}
                         </div>
                       </button>
                     ))}
@@ -937,161 +438,98 @@ const calcularCostoVuelos = () => {
             ) : (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Nombre *</Label>
-                    <Input
-                      value={newCliente.nombre}
-                      onChange={(e) => setNewCliente({ ...newCliente, nombre: e.target.value })}
-                      placeholder="Nombre"
-                    />
-                  </div>
-                  <div>
-                    <Label>Apellido *</Label>
-                    <Input
-                      value={newCliente.apellido}
-                      onChange={(e) => setNewCliente({ ...newCliente, apellido: e.target.value })}
-                      placeholder="Apellido"
-                    />
-                  </div>
-                  <div>
-                    <Label>Email *</Label>
-                    <Input
-                      type="email"
-                      value={newCliente.email}
-                      onChange={(e) => setNewCliente({ ...newCliente, email: e.target.value })}
-                      placeholder="email@ejemplo.com"
-                    />
-                  </div>
-                  <div>
-                    <Label>Teléfono *</Label>
-                    <Input
-                      value={newCliente.telefono}
-                      onChange={(e) => setNewCliente({ ...newCliente, telefono: e.target.value })}
-                      placeholder="555-1234"
-                    />
-                  </div>
+                  <Input placeholder="Nombre *" value={newCliente.nombre} onChange={(e) => setNewCliente({ ...newCliente, nombre: e.target.value })} />
+                  <Input placeholder="Apellido *" value={newCliente.apellido} onChange={(e) => setNewCliente({ ...newCliente, apellido: e.target.value })} />
+                  <Input placeholder="Email *" type="email" value={newCliente.email} onChange={(e) => setNewCliente({ ...newCliente, email: e.target.value })} />
+                  <Input placeholder="Teléfono *" value={newCliente.telefono} onChange={(e) => setNewCliente({ ...newCliente, telefono: e.target.value })} />
                 </div>
-                <Button
-                  onClick={handleCreateCliente}
-                  disabled={isLoading}
-                  className="w-full bg-[#00D4D4] hover:bg-[#00D4D4]/90"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Creando...
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="w-4 h-4 mr-2" />
-                      Crear Cliente
-                    </>
-                  )}
+                <Button onClick={handleCreateCliente} disabled={isLoading} className="w-full bg-[#00D4D4] hover:bg-[#00D4D4]/90">
+                  {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
+                  {isLoading ? "Creando..." : "Crear Cliente"}
                 </Button>
               </div>
             )}
           </div>
         )
 
+      // --- PASO 2: PASAJEROS ---
       case 2:
         return (
           <div className="space-y-4">
-            <p className="text-gray-600 text-center mb-4">
-              Cliente: <span className="font-semibold">{selectedClient?.nombre} {selectedClient?.apellido}</span>
+            <p className="text-center text-gray-600 mb-4">
+              Cliente Principal: <span className="font-semibold">{selectedClient?.nombre} {selectedClient?.apellido}</span>
             </p>
-
             {isLoading ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="w-8 h-8 animate-spin text-[#00D4D4]" />
-              </div>
+              <div className="flex justify-center py-8"><Loader2 className="w-8 h-8 animate-spin text-[#00D4D4]" /></div>
             ) : pasajeros.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                No hay pasajeros registrados para este cliente.
-              </div>
+              <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg">No hay pasajeros registrados para este cliente.</div>
             ) : (
               <div className="grid gap-3 max-h-96 overflow-y-auto">
-                {pasajeros.map((pasajero) => (
+                {pasajeros.map((p) => (
                   <button
-                    key={pasajero.id}
-                    onClick={() => handleTogglePasajero(pasajero.id)}
+                    key={p.id}
+                    onClick={() => handleTogglePasajero(p.id)}
                     className={`p-4 rounded-lg border-2 text-left transition-all ${
-                      selectedPasajeros.includes(pasajero.id)
-                        ? "border-[#00D4D4] bg-[#00D4D4]/5"
-                        : "border-gray-200 hover:border-[#00D4D4]/50"
+                      selectedPasajeros.includes(p.id) ? "border-[#00D4D4] bg-[#00D4D4]/5" : "border-gray-200 hover:border-[#00D4D4]/50"
                     }`}
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <p className="font-semibold text-gray-900">
-                          {pasajero.nombre} {pasajero.apellido}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          {pasajero.edad} años • {pasajero.tipo_pasajero}
-                        </p>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="font-semibold">{p.nombre} {p.apellido}</p>
+                        <p className="text-sm text-gray-600 capitalize">{p.tipo_pasajero} • {p.edad} años</p>
                       </div>
-                      {selectedPasajeros.includes(pasajero.id) && (
-                        <Check className="w-6 h-6 text-[#00D4D4] flex-shrink-0" />
-                      )}
+                      {selectedPasajeros.includes(p.id) && <Check className="w-6 h-6 text-[#00D4D4]" />}
                     </div>
                   </button>
                 ))}
               </div>
             )}
-
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-sm text-gray-600">
-                Pasajeros seleccionados: <span className="font-semibold">{selectedPasajeros.length}</span>
+            <div className="bg-[#00D4D4]/10 p-3 rounded-lg text-center">
+              <p className="text-sm text-[#00D4D4] font-medium">
+                Total Viajeros: {1 + selectedPasajeros.length} (Cliente + {selectedPasajeros.length} seleccionados)
               </p>
             </div>
           </div>
         )
 
+      // --- PASO 3: DESTINO ---
       case 3:
         return (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Origen *</Label>
-                <Input
-                  value={destinoData.origen}
-                  onChange={(e) => setDestinoData({ ...destinoData, origen: e.target.value })}
-                  placeholder="Ciudad de origen"
-                />
+                <div className="relative mt-1.5">
+                   <MapPin className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/>
+                   <Input className="pl-9" value={destinoData.origen} onChange={(e) => setDestinoData({ ...destinoData, origen: e.target.value })} placeholder="Ciudad de origen" />
+                </div>
               </div>
               <div>
                 <Label>Destino *</Label>
-                <Input
-                  value={destinoData.destino}
-                  onChange={(e) => setDestinoData({ ...destinoData, destino: e.target.value })}
-                  placeholder="Ciudad de destino"
-                />
+                 <div className="relative mt-1.5">
+                   <MapPin className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/>
+                   <Input className="pl-9" value={destinoData.destino} onChange={(e) => setDestinoData({ ...destinoData, destino: e.target.value })} placeholder="Ciudad destino" />
+                </div>
               </div>
               <div>
                 <Label>Fecha de Salida *</Label>
-                <Input
-                  type="date"
-                  value={destinoData.fecha_salida}
-                  onChange={(e) => setDestinoData({ ...destinoData, fecha_salida: e.target.value })}
-                />
+                <Input type="date" className="mt-1.5" value={destinoData.fecha_salida} onChange={(e) => setDestinoData({ ...destinoData, fecha_salida: e.target.value })} />
               </div>
               <div>
                 <Label>Fecha de Regreso *</Label>
-                <Input
-                  type="date"
-                  value={destinoData.fecha_regreso}
-                  onChange={(e) => setDestinoData({ ...destinoData, fecha_regreso: e.target.value })}
-                />
+                <Input type="date" className="mt-1.5" value={destinoData.fecha_regreso} onChange={(e) => setDestinoData({ ...destinoData, fecha_regreso: e.target.value })} />
               </div>
             </div>
             <div>
               <Label>Tipo de Viaje</Label>
               <select
                 value={destinoData.tipo_viaje}
-                onChange={(e) => setDestinoData({ ...destinoData, tipo_viaje: e.target.value as 'individual' | 'grupo' })}
-                className="w-full p-2 border rounded-lg"
+                onChange={(e) => setDestinoData({ ...destinoData, tipo_viaje: e.target.value as any })}
+                className="w-full mt-1.5 px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-[#00D4D4] outline-none"
               >
-                <option value="individual">Individual</option>
+                <option value="individual">Individual / Familiar</option>
                 <option value="grupo">Grupo</option>
+                <option value="luna_miel">Luna de Miel</option>
               </select>
             </div>
             <div>
@@ -1099,50 +537,37 @@ const calcularCostoVuelos = () => {
               <Textarea
                 value={destinoData.descripcion_general}
                 onChange={(e) => setDestinoData({ ...destinoData, descripcion_general: e.target.value })}
-                placeholder="Describe el viaje..."
-                rows={4}
+                placeholder="Notas generales del viaje, requerimientos especiales..."
+                rows={3}
+                className="mt-1.5"
               />
             </div>
           </div>
         )
 
-      case 4:
-        // Calculamos el total real de personas (cliente + acompañantes)
+      // --- PASO 4: VUELOS ---
+      case 4: {
         const totalPaxVuelos = 1 + selectedPasajeros.length;
-        
-        // ✅ Calculamos el GRAN TOTAL acumulado hasta este paso
-        // (En este paso, es solo la suma de los vuelos, pero si hubiera pasos anteriores con costos, los sumaríamos aquí)
-        const granTotalHastaAhora = calcularCostoVuelos();
-
         return (
           <div className="space-y-6">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="font-semibold text-lg">Vuelos del viaje</h3>
-                {/* ✅ CORRECCIÓN: Usamos la variable totalPaxVuelos */}
-                <p className="text-sm text-gray-600">
-                  Gestiona los vuelos para los {totalPaxVuelos} pasajero(s)
-                </p>
+                <h3 className="font-semibold text-lg">Vuelos</h3>
+                <p className="text-sm text-gray-600">Gestiona los vuelos para {totalPaxVuelos} pasajero(s)</p>
               </div>
               <div className="text-right">
-                {/* ✅ CAMBIO DE TEXTO: Total Cotización */}
                 <p className="text-sm text-gray-600">Total Cotización</p>
                 <p className="text-2xl font-bold text-[#00D4D4]">
-                  ${granTotalHastaAhora.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                  ${calcularPrecioFinal().toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                 </p>
               </div>
             </div>
-
-            <VuelosLista 
-              vuelos={vuelos} 
-              onEliminar={handleEliminarVuelo} 
-            />
-
+            <VuelosLista vuelos={vuelos} onEliminar={handleEliminarVuelo} />
             <div className="mt-6">
               <VueloForm 
-                onAgregar={handleAgregarVuelo}
-                onCancelar={() => {}}
-                numPasajeros={totalPaxVuelos} // ✅ Pasamos el número correcto al form
+                onAgregar={handleAgregarVuelo} 
+                onCancelar={() => {}} 
+                numPasajeros={totalPaxVuelos}
                 defaultOrigen={destinoData.origen}
                 defaultDestino={destinoData.destino}
                 fechaInicioViaje={destinoData.fecha_salida}
@@ -1151,11 +576,10 @@ const calcularCostoVuelos = () => {
             </div>
           </div>
         )
+      }
 
+      // --- PASO 5: HOTELES ---
       case 5: {
-        // ✅ Usamos la función general para obtener el Gran Total acumulado
-        const granTotalHastaAhora = calcularPrecioFinal();
-        
         return (
           <div className="space-y-6">
             <div className="flex items-center justify-between mb-4">
@@ -1164,21 +588,16 @@ const calcularCostoVuelos = () => {
                 <p className="text-sm text-gray-600">Agrega los hoteles para el viaje</p>
               </div>
               <div className="text-right">
-                {/* ✅ CAMBIO DE TEXTO Y VALOR: Total Cotización */}
                 <p className="text-sm text-gray-600">Total Cotización</p>
                 <p className="text-2xl font-bold text-[#00D4D4]">
-                  ${granTotalHastaAhora.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                  ${calcularPrecioFinal().toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                 </p>
               </div>
             </div>
-
-            {/* Lista de hoteles */}
             <HotelesLista hoteles={hoteles} onEliminar={handleEliminarHotel} />
-
             <div className="mt-6">
-              {/* Formulario nuevo */}
               <HotelForm 
-                onAgregar={handleAgregarHotel}
+                onAgregar={handleAgregarHotel} 
                 onCancelar={() => {}}
                 defaultDestino={destinoData.destino}
                 defaultCheckin={destinoData.fecha_salida}
@@ -1189,12 +608,12 @@ const calcularCostoVuelos = () => {
         )
       }
 
+      // --- PASO 6: TOURS ---
       case 6: {
-        // ✅ CÁLCULO INTELIGENTE DE PASAJEROS
-        // Adultos: El cliente principal (1) + los pasajeros adicionales que sean 'adulto'
-        const numAdultosTotal = 1 + selectedPasajeros.filter(p => p.tipo_pasajero === 'adulto').length;
-        // Niños: Sumamos 'nino' e 'infante'
-        const numNinosTotal = selectedPasajeros.filter(p => p.tipo_pasajero === 'nino' || p.tipo_pasajero === 'infante').length;
+        // Calculamos pasajeros para sugerir defaults
+        const paxObjects = pasajeros.filter(p => selectedPasajeros.includes(p.id));
+        const numAdultos = 1 + paxObjects.filter(p => p.tipo_pasajero === 'adulto').length;
+        const numNinos = paxObjects.filter(p => p.tipo_pasajero !== 'adulto').length;
 
         return (
           <div className="space-y-6">
@@ -1205,398 +624,169 @@ const calcularCostoVuelos = () => {
               </div>
               <div className="text-right">
                 <p className="text-sm text-gray-600">Total Cotización</p>
-                {/* ✅ El total ahora se actualizará correctamente al agregar tours */}
                 <p className="text-2xl font-bold text-[#00D4D4]">
                   ${calcularPrecioFinal().toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                 </p>
               </div>
             </div>
-
             <ToursLista tours={tours} onEliminar={handleEliminarTour} />
-
             <div className="mt-6">
               <TourForm 
-                onAgregar={handleAgregarTour}
+                onAgregar={handleAgregarTour} 
                 onCancelar={() => {}}
-                // ✅ Pasamos los defaults calculados
                 defaultUbicacion={destinoData.destino}
                 defaultFecha={destinoData.fecha_salida}
-                defaultNumAdultos={numAdultosTotal}
-                defaultNumNinos={numNinosTotal}
+                defaultNumAdultos={numAdultos}
+                defaultNumNinos={numNinos}
               />
             </div>
           </div>
         )
       }
 
-      case 7:
+      // --- PASO 7: OTROS SERVICIOS ---
+      case 7: {
+        const totalPax = 1 + selectedPasajeros.length;
         return (
-          <div className="space-y-6">
+          <div className="space-y-8">
+            <div className="flex items-center justify-between border-b pb-4">
+              <h3 className="font-semibold text-xl">Otros Servicios</h3>
+              <div className="text-right">
+                <p className="text-sm text-gray-600">Total Cotización</p>
+                <p className="text-2xl font-bold text-[#00D4D4]">
+                  ${calcularPrecioFinal().toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+            </div>
+
+            {/* SECCIÓN 1: TRANSPORTES */}
             <div>
-              <h3 className="font-semibold text-lg mb-4">Transportación</h3>
-              {transportaciones.length > 0 && (
-                <div className="space-y-3 mb-4">
-                  {transportaciones.map((t, index) => (
-                    <div key={index} className="bg-gray-50 p-4 rounded-lg flex justify-between items-start">
-                      <div>
-                        <p className="font-semibold flex items-center gap-2">
-                          <Bus className="w-5 h-5 text-[#00D4D4]" />
-                          {t.tipo} - {t.descripcion}
-                        </p>
-                        <p className="text-sm text-gray-600">{t.fecha}</p>
-                        <p className="text-sm font-medium">
-                          Costo: ${t.costo_total.toLocaleString()}
-                        </p>
-                        <p className="text-sm font-medium text-green-700">
-                          Precio Venta: ${t.precio_venta_total.toLocaleString()}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => handleRemoveTransportacion(index)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              
-              {/* --- LÓGICA DE CÁLCULO EN VIVO --- */}
-              {(() => {
-                const costoNeto = newTransportacion.costo_total || 0
-                const precioVenta = newTransportacion.precio_venta_total || 0
-                const utilidad = (precioVenta - costoNeto) || 0
-
-                return (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Tipo</Label>
-                        <select
-                          value={newTransportacion.tipo}
-                          onChange={(e) => setNewTransportacion({ ...newTransportacion, tipo: e.target.value })}
-                          className="w-full p-2 border rounded-lg"
-                        >
-                          <option value="terrestre">Terrestre</option>
-                          <option value="aereo">Aéreo</option>
-                          <option value="maritimo">Marítimo</option>
-                        </select>
-                      </div>
-                      <div>
-                        <Label>Proveedor</Label>
-                        <Input
-                          value={newTransportacion.proveedor}
-                          onChange={(e) => setNewTransportacion({ ...newTransportacion, proveedor: e.target.value })}
-                          placeholder="Ej: Transportes Gaviota"
-                        />
-                      </div>
-                    </div>
-                    <div className="col-span-2">
-                      <Label>Descripción *</Label>
-                      <Input
-                        value={newTransportacion.descripcion}
-                        onChange={(e) => setNewTransportacion({ ...newTransportacion, descripcion: e.target.value })}
-                        placeholder="Ej: Traslado aeropuerto-hotel"
-                      />
-                    </div>
-                    <div>
-                      <Label>Fecha</Label>
-                      <Input
-                        type="date"
-                        value={newTransportacion.fecha}
-                        onChange={(e) => setNewTransportacion({ ...newTransportacion, fecha: e.target.value })}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t">
-                      <div>
-                        <Label>Costo Total (Neto)</Label>
-                        <Input
-                          type="number"
-                          value={newTransportacion.costo_total}
-                          onChange={(e) => setNewTransportacion({ ...newTransportacion, costo_total: parseFloat(e.target.value) || 0 })}
-                          placeholder="0.00"
-                        />
-                      </div>
-                      <div>
-                        <Label>Precio Venta Total</Label>
-                        <Input
-                          type="number"
-                          value={newTransportacion.precio_venta_total}
-                          onChange={(e) => setNewTransportacion({ ...newTransportacion, precio_venta_total: parseFloat(e.target.value) || 0 })}
-                          placeholder="0.00"
-                        />
-                      </div>
-                      <div>
-                        <Label>Comisión (Monto)</Label>
-                        <Input
-                          type="number"
-                          value={newTransportacion.comision_transporte}
-                          onChange={(e) => setNewTransportacion({ ...newTransportacion, comision_transporte: parseFloat(e.target.value) || 0 })}
-                          placeholder="0.00"
-                        />
-                      </div>
-                      <div>
-                        <Label>Utilidad (Auto)</Label>
-                        <Input
-                          value={utilidad.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}
-                          readOnly
-                          className="bg-green-100 border-green-300"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <Label>Notas</Label>
-                      <Textarea
-                        value={newTransportacion.notas}
-                        onChange={(e) => setNewTransportacion({ ...newTransportacion, notas: e.target.value })}
-                        placeholder="Detalles del servicio..."
-                        rows={2}
-                      />
-                    </div>
-                    
-                  </div>
-                )
-              })()}
-
-              <Button
-                onClick={handleAddTransportacion}
-                className="w-full mt-4 bg-[#00D4D4] hover:bg-[#00D4D4]/90"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Agregar Transportación
-              </Button>
+               <div className="flex justify-between items-center mb-4">
+                  <h4 className="font-medium text-gray-700 flex items-center gap-2">
+                    <Bus className="w-5 h-5 text-[#00D4D4]"/> Transportación
+                  </h4>
+                  {!mostrarFormTransporte && (
+                    <Button onClick={() => setMostrarFormTransporte(true)} variant="outline" size="sm" className="text-[#00D4D4] border-[#00D4D4] hover:bg-[#00D4D4]/10">
+                        <Plus className="w-4 h-4 mr-1"/> Agregar
+                    </Button>
+                  )}
+               </div>
+               <TransportesLista items={transportes} onEliminar={handleEliminarTransporte} />
+               {mostrarFormTransporte && (
+                 <TransporteForm 
+                    onAgregar={handleAgregarTransporte} 
+                    onCancelar={() => setMostrarFormTransporte(false)}
+                    defaultOrigen={destinoData.origen}
+                    defaultDestino={destinoData.destino}
+                    numPasajeros={totalPax}
+                 />
+               )}
             </div>
 
-            <div className="border-t pt-6">
-              <h3 className="font-semibold text-lg mb-4">Seguro de Viaje</h3>
-              
-              {/* --- LÓGICA DE CÁLCULO EN VIVO --- */}
-              {(() => {
-                const costoNeto = seguroData.costo_total || 0
-                const precioVenta = seguroData.precio_venta_total || 0
-                const utilidad = (precioVenta - costoNeto) || 0
-
-                return (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Aseguradora</Label>
-                        <Input
-                          value={seguroData.aseguradora}
-                          onChange={(e) => setSeguroData({ ...seguroData, aseguradora: e.target.value })}
-                          placeholder="Ej: AXA Seguros"
-                        />
-                      </div>
-                      <div>
-                        <Label>Tipo de Cobertura</Label>
-                        <Input
-                          value={seguroData.tipo_cobertura}
-                          onChange={(e) => setSeguroData({ ...seguroData, tipo_cobertura: e.target.value })}
-                          placeholder="Ej: Viaje completo"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div>
-                        <Label>Costo Total (Neto)</Label>
-                        <Input
-                          type="number"
-                          value={seguroData.costo_total}
-                          onChange={(e) => setSeguroData({ ...seguroData, costo_total: parseFloat(e.target.value) || 0 })}
-                          placeholder="0.00"
-                        />
-                      </div>
-                      <div>
-                        <Label>Precio Venta Total</Label>
-                        <Input
-                          type="number"
-                          value={seguroData.precio_venta_total}
-                          onChange={(e) => setSeguroData({ ...seguroData, precio_venta_total: parseFloat(e.target.value) || 0 })}
-                          placeholder="0.00"
-                        />
-                      </div>
-                      <div>
-                        <Label>Comisión (Monto)</Label>
-                        <Input
-                          type="number"
-                          value={seguroData.comision}
-                          onChange={(e) => setSeguroData({ ...seguroData, comision: parseFloat(e.target.value) || 0 })}
-                          placeholder="0.00"
-                        />
-                      </div>
-                      <div>
-                        <Label>Utilidad (Auto)</Label>
-                        <Input
-                          value={utilidad.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}
-                          readOnly
-                          className="bg-green-100 border-green-300"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <Label>Monto de Cobertura (Aprox)</Label>
-                      <Input
-                        type="number"
-                        value={seguroData.monto_cobertura}
-                        onChange={(e) => setSeguroData({ ...seguroData, monto_cobertura: parseFloat(e.target.value) || 0 })}
-                        placeholder="50000"
-                      />
-                    </div>
-
-                    <div>
-                      <Label>Notas del Seguro</Label>
-                      <Textarea
-                        value={seguroData.notas}
-                        onChange={(e) => setSeguroData({ ...seguroData, notas: e.target.value })}
-                        placeholder="Detalles de la póliza..."
-                        rows={2}
-                      />
-                    </div>
-                  </div>
-                )
-              })()}
+            {/* SECCIÓN 2: SEGURO */}
+            <div className="border-t pt-8">
+               <SeguroForm data={seguro} onChange={setSeguro} />
             </div>
-            
-            <div className="border-t pt-6">
-              <h3 className="font-semibold text-lg mb-4">Otros Costos Adicionales</h3>
-              <div className="grid grid-cols-2 gap-4">
+
+            {/* SECCIÓN 3: OTROS COSTOS */}
+            <div className="border-t pt-6 bg-gray-50 p-4 rounded-xl">
+              <h4 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-gray-500"/> Ajustes Finales
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label>Otros Costos (No comisionables)</Label>
-                  <Input
-                    type="number"
-                    value={costosData.otros_costos}
-                    onChange={(e) => setCostosData({ ...costosData, otros_costos: parseFloat(e.target.value) || 0 })}
-                    placeholder="0.00"
-                    min="0"
-                    step="0.01"
+                  <Input 
+                    type="number" min="0" step="0.01" placeholder="0.00"
+                    value={costosData.otros_costos || ''} 
+                    onChange={e => setCostosData({ otros_costos: parseFloat(e.target.value) || 0 })} 
+                    className="bg-white mt-1.5"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Cargos extra que se suman al costo (ej. envío de docs).
-                  </p>
+                  <p className="text-xs text-gray-500 mt-1">Cargos extra que se suman al costo neto.</p>
+                </div>
+                <div>
+                  <Label>Ajuste de Comisión (Manual)</Label>
+                  <Input 
+                    type="number" min="0" step="0.01" placeholder="0.00"
+                    value={comisionMonto || ''} 
+                    onChange={e => setComisionMonto(parseFloat(e.target.value) || 0)} 
+                    className="bg-white mt-1.5 border-green-200 focus-visible:ring-green-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Monto extra a sumar a tu ganancia final.</p>
                 </div>
               </div>
             </div>
           </div>
         )
+      }
 
-      case 8:
-        // 1. Calcular COSTOS NETOS REALES (lo que te cuesta a ti)
-        const costoNetoVuelos = vuelos.reduce((sum, v) => sum + (v.costo_total || 0), 0);
-        const costoNetoHoteles = hoteles.reduce((sum, h) => sum + (h.costo_total || 0), 0);
-        const costoNetoTours = tours.reduce((sum, t) => sum + (t.costo_total || 0), 0); // Asumiendo que ya calculaste el total en el paso 6
-        // Si tours no tiene costo_total, usa: tours.reduce((sum, t) => sum + (t.costo_por_persona * (selectedPasajeros.length + 1)), 0)
-        const costoNetoTransportes = transportaciones.reduce((sum, tr) => sum + (tr.costo_total || 0), 0);
-        const costoNetoSeguros = seguroData.costo_total || 0;
-        const otrosCostos = costosData.otros_costos || 0;
-
-        const granTotalCostoNeto = costoNetoVuelos + costoNetoHoteles + costoNetoTours + costoNetoTransportes + costoNetoSeguros + otrosCostos;
-
-        // 2. Calcular PRECIO DE VENTA FINAL (lo que paga el cliente)
-        // Usamos las funciones que ya tienes que suman los totales con comisión
-        const precioFinal = calcularPrecioFinal(); 
-
-        // 3. Calcular UTILIDAD REAL
-        const utilidadReal = precioFinal - granTotalCostoNeto;
-
-        // 4. Calcular COMISIONES TOTALES (para el agente)
-        const totalPasajeros = selectedPasajeros.length + 1;
-        // NOTA: Asegúrate de que v.comision_vuelo sea la unitaria. Si es así, multiplícala por pasajeros.
-        // Si VueloForm ya guarda la comisión TOTAL en algún campo, úsalo directamente.
-        // Basado en tu último VueloForm, comision_vuelo es UNITARIA.
-        const comisionVuelosTotal = vuelos.reduce((sum, v) => sum + ((v.comision_vuelo || 0) * v.cantidad_pasajeros), 0);
+      // --- PASO 8: RESUMEN FINAL ---
+      case 8: {
+        const costoNetoTotal = calcularCostoNetoTotal();
+        const precioFinal = calcularPrecioFinal();
+        const utilidadReal = precioFinal - costoNetoTotal;
         
-        const totalComisiones = 
-          comisionVuelosTotal +
-          hoteles.reduce((sum, h) => sum + (h.comision_hotel || 0), 0) +
-          tours.reduce((sum, t) => sum + (t.comision_tour || 0), 0) + // Revisa si es por persona o total
-          transportaciones.reduce((sum, tr) => sum + (tr.comision_transporte || 0), 0) +
-          (seguroData.comision || 0) +
-          comisionMonto; // La comisión extra manual del paso 7
+        // Calcular comisión total (suma de todas las comisiones individuales)
+        const comisionVuelos = vuelos.reduce((sum, v) => sum + ((v.comision_vuelo || 0) * v.cantidad_pasajeros), 0);
+        const comisionHoteles = hoteles.reduce((sum, h) => sum + (h.comision_hotel || 0), 0);
+        const comisionTours = tours.reduce((sum, t) => sum + (t.comision_tour || 0), 0);
+        const comisionTransportes = transportes.reduce((sum, t) => sum + (t.comision_transporte || 0), 0);
+        const totalComisiones = comisionVuelos + comisionHoteles + comisionTours + comisionTransportes + (seguro.comision || 0) + comisionMonto;
 
         return (
           <div className="space-y-6">
-            <div className="bg-gray-50 p-6 rounded-lg space-y-6">
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-2">Resumen del Viaje</h3>
-                <p className="text-gray-700">
-                  {selectedClient?.nombre} {selectedClient?.apellido}
-                </p>
-                <p className="text-sm text-gray-600">
-                  {destinoData.origen} → {destinoData.destino} ({new Date(destinoData.fecha_salida).toLocaleDateString('es-MX')} - {new Date(destinoData.fecha_regreso).toLocaleDateString('es-MX')})
-                </p>
-              </div>
-
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-3">Desglose Financiero</h3>
-                <div className="space-y-2 text-sm">
-                  {/* COSTOS NETOS */}
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Costo Vuelos:</span>
-                    <span className="font-medium">${costoNetoVuelos.toLocaleString('es-MX', {minimumFractionDigits: 2})}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Costo Hoteles:</span>
-                    <span className="font-medium">${costoNetoHoteles.toLocaleString('es-MX', {minimumFractionDigits: 2})}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Costo Tours:</span>
-                    <span className="font-medium">${costoNetoTours.toLocaleString('es-MX', {minimumFractionDigits: 2})}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Costo Transportación:</span>
-                    <span className="font-medium">${costoNetoTransportes.toLocaleString('es-MX', {minimumFractionDigits: 2})}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Costo Seguros:</span>
-                    <span className="font-medium">${costoNetoSeguros.toLocaleString('es-MX', {minimumFractionDigits: 2})}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Otros Costos:</span>
-                    <span className="font-medium">${otrosCostos.toLocaleString('es-MX', {minimumFractionDigits: 2})}</span>
-                  </div>
-                  
-                  <div className="border-t pt-2 flex justify-between font-semibold">
-                    <span>Costo Neto Total:</span>
-                    <span>${granTotalCostoNeto.toLocaleString('es-MX', {minimumFractionDigits: 2})}</span>
-                  </div>
-
-                  {/* UTILIDAD */}
-                  <div className="flex justify-between text-green-600 text-base pt-2">
-                    <span className="font-medium">Tu Utilidad Real:</span>
-                    <span className="font-bold">+${utilidadReal.toLocaleString('es-MX', {minimumFractionDigits: 2})}</span>
-                  </div>
-
-                  {/* PRECIO FINAL */}
-                  <div className="border-t-2 border-[#00D4D4] pt-3 mt-2 flex justify-between text-xl">
-                    <span className="font-bold text-gray-900">Precio Final al Cliente:</span>
-                    <span className="font-bold text-[#00D4D4]">${precioFinal.toLocaleString('es-MX', {minimumFractionDigits: 2})}</span>
-                  </div>
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <FileCheck className="w-6 h-6 text-[#00D4D4]"/> Resumen de la Cotización
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                   <h4 className="font-medium text-gray-500 text-sm uppercase mb-2">Cliente</h4>
+                   <p className="text-lg font-semibold text-gray-900">{selectedClient?.nombre} {selectedClient?.apellido}</p>
+                   <p className="text-gray-600">{selectedClient?.email}</p>
+                </div>
+                <div>
+                   <h4 className="font-medium text-gray-500 text-sm uppercase mb-2">Viaje</h4>
+                   <p className="font-medium">{destinoData.origen} <ChevronRight className="inline w-4 h-4"/> {destinoData.destino}</p>
+                   <p className="text-gray-600 text-sm flex items-center gap-1">
+                     <div className="w-2 h-2 rounded-full bg-green-500"></div> {new Date(destinoData.fecha_salida).toLocaleDateString('es-MX', {day: 'numeric', month: 'short', year: 'numeric'})}
+                     <div className="w-2 h-2 rounded-full bg-red-500 ml-2"></div> {new Date(destinoData.fecha_regreso).toLocaleDateString('es-MX', {day: 'numeric', month: 'short', year: 'numeric'})}
+                   </p>
                 </div>
               </div>
 
-              {/* COMISIONES AGENTE */}
-              <div className="border-t pt-4 bg-blue-50 p-4 rounded-lg">
-                <div className="flex justify-between items-center">
-                    <h3 className="font-semibold text-blue-900 flex items-center gap-2">
-                        <DollarSign className="w-5 h-5" /> Comisión Total del Agente
-                    </h3>
-                    <span className="font-bold text-xl text-blue-900">
-                        ${totalComisiones.toLocaleString('es-MX', {minimumFractionDigits: 2})}
-                    </span>
+              <div className="border-t border-gray-100 pt-6">
+                <h4 className="font-medium text-gray-900 mb-4">Desglose Financiero</h4>
+                <div className="space-y-3 text-sm">
+                    {/* ... (Líneas de desglose de costos netos si las quieres mostrar) ... */}
+                    <div className="flex justify-between items-center py-2 border-b border-gray-50">
+                        <span className="text-gray-600">Costo Neto Total (Proveedores):</span>
+                        <span className="font-medium">${costoNetoTotal.toLocaleString('es-MX', {minimumFractionDigits: 2})}</span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center py-3 bg-[#00D4D4]/5 px-4 rounded-lg -mx-4">
+                        <span className="text-lg font-bold text-gray-900">Precio Final al Cliente:</span>
+                        <span className="text-2xl font-bold text-[#00D4D4]">${precioFinal.toLocaleString('es-MX', {minimumFractionDigits: 2})}</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 mt-4">
+                        <div className="bg-green-50 p-4 rounded-lg border border-green-100">
+                            <p className="text-xs text-green-700 uppercase font-bold mb-1">Tu Utilidad Real</p>
+                            <p className="text-2xl font-bold text-green-600">+${utilidadReal.toLocaleString('es-MX', {minimumFractionDigits: 2})}</p>
+                        </div>
+                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                            <p className="text-xs text-blue-700 uppercase font-bold mb-1 flex items-center gap-1"><DollarSign className="w-3 h-3"/> Comisiones Totales</p>
+                            <p className="text-xl font-bold text-blue-900">${totalComisiones.toLocaleString('es-MX', {minimumFractionDigits: 2})}</p>
+                        </div>
+                    </div>
                 </div>
-                <p className="text-xs text-blue-600/70 mt-1">
-                    Suma de todas las comisiones configuradas en cada servicio.
-                </p>
               </div>
 
             </div>
           </div>
         )
+      }
 
       default:
         return null
@@ -1609,96 +799,73 @@ const calcularCostoVuelos = () => {
       <div className="flex-1 flex flex-col overflow-hidden">
         <DashboardHeader title="Nueva Cotización" />
         <main className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-5xl mx-auto">
+          <div className="max-w-4xl mx-auto"> {/* Hice un poco más ancho el contenedor */}
             {error && (
               <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
                 <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <p className="text-sm text-red-800">{error}</p>
-                </div>
-                <button onClick={() => setError(null)} className="text-red-600 hover:text-red-800">
-                  <X className="w-5 h-5" />
-                </button>
+                <div className="flex-1"><p className="text-sm text-red-800">{error}</p></div>
+                <button onClick={() => setError(null)} className="text-red-600 hover:text-red-800"><X className="w-5 h-5" /></button>
               </div>
             )}
 
-            <Card className="p-8">
-              <div className="mb-8">
-                <div className="flex justify-between items-center mb-8 overflow-x-auto">
-                  {steps.map((step, index) => (
-                    <div key={step.id} className="flex items-center flex-shrink-0">
-                      <div className="flex flex-col items-center">
-                        <div
-                          className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors ${
-                            currentStep === step.id
-                              ? "bg-[#00D4D4] border-[#00D4D4] text-white"
-                              : currentStep > step.id
-                              ? "bg-[#7CB342] border-[#7CB342] text-white"
-                              : "bg-white border-gray-300 text-gray-400"
-                          }`}
-                        >
-                          <step.icon className="w-5 h-5" />
-                        </div>
-                        <span className={`text-xs mt-2 font-medium text-center whitespace-nowrap ${
-                          currentStep === step.id ? "text-[#00D4D4]" : "text-gray-500"
+            <Card className="p-8 shadow-md border-0">
+              {/* Progress Steps */}
+              <div className="mb-10">
+                <div className="flex justify-between items-center relative">
+                  {/* Línea de fondo */}
+                  <div className="absolute top-5 left-0 right-0 h-0.5 bg-gray-200 -z-10 mx-10"></div>
+                  
+                  {steps.map((step, index) => {
+                    const isActive = currentStep === step.id;
+                    const isPast = currentStep > step.id;
+                    return (
+                        <div key={step.id} className="flex flex-col items-center z-10">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
+                            isActive ? "bg-[#00D4D4] border-[#00D4D4] text-white shadow-md scale-110" : 
+                            isPast ? "bg-green-500 border-green-500 text-white" : 
+                            "bg-white border-gray-300 text-gray-400"
                         }`}>
-                          {step.name}
+                            {isPast ? <Check className="w-5 h-5" /> : <step.icon className="w-5 h-5" />}
+                        </div>
+                        <span className={`text-xs mt-2 font-medium ${isActive ? "text-[#00D4D4]" : isPast ? "text-green-600" : "text-gray-500"}`}>
+                            {step.name}
                         </span>
-                      </div>
-                      {index < steps.length - 1 && (
-                        <div className={`h-0.5 w-12 mx-2 ${
-                          currentStep > step.id ? "bg-[#7CB342]" : "bg-gray-300"
-                        }`} />
-                      )}
-                    </div>
-                  ))}
+                        </div>
+                    );
+                  })}
                 </div>
-
-                <h2 className="text-2xl font-bold text-gray-900 text-center mb-2">
-                  {steps[currentStep - 1].name}
-                </h2>
-                <p className="text-gray-600 text-center">
-                  Paso {currentStep} de {steps.length}
-                </p>
               </div>
 
               {renderStepContent()}
 
-              <div className="flex justify-between mt-8 pt-6 border-t">
+              {/* Navegación */}
+              <div className="flex justify-between mt-10 pt-6 border-t">
                 <Button
                   onClick={handlePrevious}
                   variant="outline"
                   disabled={currentStep === 1}
-                  className={currentStep === 1 ? 'invisible' : ''}
+                  className={`${currentStep === 1 ? 'invisible' : ''} px-6`}
                 >
-                  <ChevronLeft className="w-4 h-4 mr-2" />
-                  Anterior
+                  <ChevronLeft className="w-4 h-4 mr-2" /> Anterior
                 </Button>
 
                 {currentStep < 8 ? (
                   <Button 
                     onClick={handleNext} 
-                    className="bg-[#00D4D4] hover:bg-[#00D4D4]/90"
+                    className="bg-[#00D4D4] hover:bg-[#00B8B8] px-6"
                   >
-                    Siguiente
-                    <ChevronRight className="w-4 h-4 ml-2" />
+                    Siguiente <ChevronRight className="w-4 h-4 ml-2" />
                   </Button>
                 ) : (
                   <Button 
                     onClick={handleSaveCotizacion} 
-                    className="bg-[#00D4D4] hover:bg-[#00D4D4]/90"
+                    className="bg-green-600 hover:bg-green-700 px-8 py-6 text-lg"
                     disabled={isSaving}
                   >
                     {isSaving ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Guardando...
-                      </>
+                      <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Guardando...</>
                     ) : (
-                      <>
-                        <Check className="w-4 h-4 mr-2" />
-                        Guardar Cotización
-                      </>
+                      <><Check className="w-5 h-5 mr-2" /> Finalizar y Guardar</>
                     )}
                   </Button>
                 )}
@@ -1709,14 +876,16 @@ const calcularCostoVuelos = () => {
       </div>
 
       {showSuccess && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="max-w-md w-full p-8 text-center">
-            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
-              <Check className="w-8 h-8 text-green-600" />
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all">
+          <Card className="max-w-md w-full p-10 text-center shadow-2xl scale-105">
+            <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6">
+              <Check className="w-10 h-10 text-green-600" />
             </div>
-            <h3 className="text-2xl font-bold mb-2">¡Cotización creada exitosamente!</h3>
-            <p className="text-gray-600 mb-4">Redirigiendo a la lista de cotizaciones...</p>
-            <Loader2 className="w-6 h-6 animate-spin text-[#00D4D4] mx-auto" />
+            <h3 className="text-3xl font-bold mb-3 text-gray-900">¡Cotización Creada!</h3>
+            <p className="text-gray-600 mb-6">La cotización se ha guardado exitosamente en el sistema.</p>
+            <div className="flex justify-center">
+                <Loader2 className="w-6 h-6 animate-spin text-[#00D4D4]" />
+            </div>
           </Card>
         </div>
       )}
