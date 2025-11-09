@@ -502,49 +502,73 @@ class CotizacionController {
     }
     
     /**
-     * Insertar hotel - CORREGIDO para tabla real (con precios y utilidad)
+     * Insertar hotel - ACTUALIZADO con nueva lógica de costos
      */
     private function insertarHotel($cotizacion_id, $hotel) {
         $sql = "INSERT INTO cotizacion_hoteles (
                     cotizacion_id, nombre_hotel, destino,
-                    tipo_habitacion,
+                    tipo_habitacion, plan_alimentacion,
                     fecha_checkin, fecha_checkout,
                     num_noches, num_habitaciones, num_personas,
-                    plan_alimentacion,
                     costo_por_noche, costo_total,
-                    precio_venta_por_noche, precio_venta_total, -- AÑADIDOS
-                    precio_venta_por_persona, comision_hotel, utilidad, notas -- AÑADIDOS
+                    precio_venta_por_noche, precio_venta_total,
+                    precio_venta_por_persona,
+                    comision_hotel, utilidad, notas
                 ) VALUES (
                     :cotizacion_id, :nombre_hotel, :destino,
-                    :tipo_habitacion,
+                    :tipo_habitacion, :plan_alimentacion,
                     :fecha_checkin, :fecha_checkout,
                     :num_noches, :num_habitaciones, :num_personas,
-                    :plan_alimentacion,
                     :costo_por_noche, :costo_total,
-                    :precio_venta_por_noche, :precio_venta_total, -- AÑADIDOS
-                    :precio_venta_por_persona, :comision_hotel, :utilidad, :notas -- AÑADIDOS
+                    :precio_venta_por_noche, :precio_venta_total,
+                    :precio_venta_por_persona,
+                    :comision_hotel, :utilidad, :notas
                 )";
         
         $stmt = $this->conn->prepare($sql);
         
-        $stmt->bindParam(':cotizacion_id', $cotizacion_id);
-        $stmt->bindParam(':nombre_hotel', $hotel['nombre_hotel']);
-        $stmt->bindParam(':destino', $hotel['destino']);
-        $stmt->bindParam(':tipo_habitacion', $hotel['tipo_habitacion']);
-        $stmt->bindParam(':fecha_checkin', $hotel['fecha_checkin']);
-        $stmt->bindParam(':fecha_checkout', $hotel['fecha_checkout']);
-        $stmt->bindParam(':num_noches', $hotel['num_noches']);
-        $stmt->bindParam(':num_habitaciones', $hotel['num_habitaciones']);
-        $stmt->bindParam(':num_personas', $hotel['num_personas']);
-        $stmt->bindParam(':plan_alimentacion', $hotel['plan_alimentacion']);
-        $stmt->bindParam(':costo_por_noche', $hotel['costo_por_noche']);
-        $stmt->bindParam(':costo_total', $hotel['costo_total']);
-        $stmt->bindParam(':precio_venta_por_noche', $hotel['precio_venta_por_noche']);
-        $stmt->bindParam(':precio_venta_total', $hotel['precio_venta_total']);
-        $stmt->bindParam(':precio_venta_por_persona', $hotel['precio_venta_por_persona']);
-        $stmt->bindParam(':comision_hotel', $hotel['comision_hotel']);
-        $stmt->bindParam(':utilidad', $hotel['utilidad']);
-        $stmt->bindParam(':notas', $hotel['notas']);
+        // Datos básicos
+        $stmt->bindValue(':cotizacion_id', $cotizacion_id);
+        $stmt->bindValue(':nombre_hotel', $hotel['nombre_hotel']);
+        $stmt->bindValue(':destino', $hotel['destino'] ?? '');
+        $stmt->bindValue(':tipo_habitacion', $hotel['tipo_habitacion'] ?? 'Estándar');
+        $stmt->bindValue(':plan_alimentacion', $hotel['plan_alimentacion'] ?? 'sin_alimentos');
+        $stmt->bindValue(':fecha_checkin', $hotel['fecha_checkin']);
+        $stmt->bindValue(':fecha_checkout', $hotel['fecha_checkout']);
+        
+        // Números
+        $noches = $hotel['num_noches'] ?? 1;
+        $habitaciones = $hotel['num_habitaciones'] ?? 1;
+        // Nota: num_personas no viene en tu nuevo formulario, asumimos 2 por habitación como default razonable si falta, o puedes agregarlo al form.
+        $personas = $hotel['num_personas'] ?? ($habitaciones * 2); 
+
+        $stmt->bindValue(':num_noches', $noches);
+        $stmt->bindValue(':num_habitaciones', $habitaciones);
+        $stmt->bindValue(':num_personas', $personas);
+
+        // --- NUEVA LÓGICA DE COSTOS ---
+        // Recibimos: precio_venta_total y comision_hotel
+        $precio_venta_total = $hotel['precio_venta_total'] ?? 0;
+        $comision = $hotel['comision_hotel'] ?? 0;
+        // Calculamos: costo_total
+        $costo_total = $precio_venta_total - $comision;
+
+        // Derivados unitarios (para reportes)
+        $precio_noche = ($noches > 0) ? ($precio_venta_total / $noches) : $precio_venta_total;
+        $costo_noche = ($noches > 0 && $habitaciones > 0) ? ($costo_total / $noches / $habitaciones) : 0;
+        $precio_persona = ($personas > 0) ? ($precio_venta_total / $personas) : 0;
+
+        $stmt->bindValue(':costo_total', $costo_total);
+        $stmt->bindValue(':precio_venta_total', $precio_venta_total);
+        $stmt->bindValue(':comision_hotel', $comision);
+        $stmt->bindValue(':utilidad', $comision); // En este modelo, la comisión es la utilidad directa del hotel
+
+        // Guardamos los unitarios calculados
+        $stmt->bindValue(':costo_por_noche', $costo_noche);
+        $stmt->bindValue(':precio_venta_por_noche', $precio_noche);
+        $stmt->bindValue(':precio_venta_por_persona', $precio_persona);
+        
+        $stmt->bindValue(':notas', $hotel['notas'] ?? '');
         
         $stmt->execute();
     }

@@ -1,381 +1,244 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
-import { Hotel as HotelIcon, X } from 'lucide-react';
+import { Hotel, X, Calendar, DollarSign, BedDouble, Calculator, MapPin, Clock } from 'lucide-react';
 
-interface Hotel {
+export interface HotelItem {
   id: string;
-  nombre_hotel: string;
-  categoria: number;
-  ubicacion: string;
-  direccion: string;
+  nombre: string;
+  destino: string;
   fecha_checkin: string;
   fecha_checkout: string;
   num_noches: number;
   num_habitaciones: number;
   tipo_habitacion: string;
-  plan_alimenticio: string;
-  costo_por_noche: number;
-  costo_total: number;
+  plan_alimentacion: string;
+  
+  // Costos
+  precio_venta_total: number;
   comision_hotel: number;
-  total_con_comision: number;
+  costo_total: number;
+  costo_por_noche: number;    
+  precio_venta_por_noche: number;
+  
+  notas?: string;
 }
 
 interface HotelFormProps {
-  onAgregar: (hotel: Hotel) => void;
+  onAgregar: (hotel: HotelItem) => void;
   onCancelar: () => void;
+  // ✅ Props para los defaults
+  defaultDestino?: string;
+  defaultCheckin?: string;
+  defaultCheckout?: string;
 }
 
-export function HotelForm({ onAgregar, onCancelar }: HotelFormProps) {
-  const [hotel, setHotel] = useState<Partial<Hotel>>({
-    categoria: 3,
+export function HotelForm({ 
+  onAgregar, 
+  onCancelar, 
+  defaultDestino = '',
+  defaultCheckin = '',
+  defaultCheckout = ''
+}: HotelFormProps) {
+
+  const [hotel, setHotel] = useState<Partial<HotelItem>>({
+    destino: defaultDestino,
+    // ✅ Usamos los defaults aquí
+    fecha_checkin: defaultCheckin,
+    fecha_checkout: defaultCheckout,
     num_habitaciones: 1,
-    costo_por_noche: 0,
+    tipo_habitacion: '',
+    plan_alimentacion: 'sin_alimentos',
+    precio_venta_total: 0,
     comision_hotel: 0,
+    num_noches: 0,
   });
 
-  const handleChange = (field: string, value: any) => {
-    let updatedHotel = { ...hotel, [field]: value };
-    
-    // Calcular número de noches automáticamente
-    if (field === 'fecha_checkin' || field === 'fecha_checkout') {
-      if (updatedHotel.fecha_checkin && updatedHotel.fecha_checkout) {
-        const checkin = new Date(updatedHotel.fecha_checkin);
-        const checkout = new Date(updatedHotel.fecha_checkout);
-        const diffTime = Math.abs(checkout.getTime() - checkin.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        updatedHotel.num_noches = diffDays;
-      }
+  // Efecto: Calcular noches automáticamente al cargar o cambiar fechas
+  useEffect(() => {
+    if (hotel.fecha_checkin && hotel.fecha_checkout) {
+      const start = new Date(hotel.fecha_checkin);
+      const end = new Date(hotel.fecha_checkout);
+      const diffTime = end.getTime() - start.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+      setHotel(prev => ({ ...prev, num_noches: diffDays > 0 ? diffDays : 0 }));
     }
-    
-    setHotel(updatedHotel);
-  };
+  }, [hotel.fecha_checkin, hotel.fecha_checkout]);
 
-  const calcularTotal = () => {
-    const noches = hotel.num_noches || 0;
-    const habitaciones = hotel.num_habitaciones || 1;
-    const costoPorNoche = hotel.costo_por_noche || 0;
-    
-    const costoTotal = noches * habitaciones * costoPorNoche;
-    const totalConComision = costoTotal + (hotel.comision_hotel || 0);
-    
-    return { costoTotal, totalConComision };
+  const handleChange = (field: string, value: any) => {
+    setHotel(prev => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = () => {
-    const { costoTotal, totalConComision } = calcularTotal();
-    
-    const hotelCompleto: Hotel = {
-      id: Date.now().toString(),
-      nombre_hotel: hotel.nombre_hotel || '',
-      categoria: hotel.categoria || 3,
-      ubicacion: hotel.ubicacion || '',
-      direccion: hotel.direccion || '',
-      fecha_checkin: hotel.fecha_checkin || '',
-      fecha_checkout: hotel.fecha_checkout || '',
-      num_noches: hotel.num_noches || 0,
-      num_habitaciones: hotel.num_habitaciones || 1,
-      tipo_habitacion: hotel.tipo_habitacion || '',
-      plan_alimenticio: hotel.plan_alimenticio || '',
-      costo_por_noche: hotel.costo_por_noche || 0,
-      costo_total: costoTotal,
-      comision_hotel: hotel.comision_hotel || 0,
-      total_con_comision: totalConComision,
+    const noches = hotel.num_noches || 1;
+    const precioVentaTotal = hotel.precio_venta_total || 0;
+    const comision = hotel.comision_hotel || 0;
+    const costoNetoTotal = precioVentaTotal - comision;
+
+    const nuevoHotel: HotelItem = {
+        id: Date.now().toString(),
+        ...hotel as HotelItem,
+        precio_venta_total: precioVentaTotal,
+        comision_hotel: comision,
+        costo_total: costoNetoTotal,
+        precio_venta_por_noche: precioVentaTotal / noches,
+        costo_por_noche: costoNetoTotal / noches,
+        num_noches: hotel.num_noches || 0,
     };
-    
-    onAgregar(hotelCompleto);
+    onAgregar(nuevoHotel);
   };
 
-  const { costoTotal, totalConComision } = calcularTotal();
+  // Cálculos para la UI
+  const noches = hotel.num_noches || 0;
+  const precioVenta = hotel.precio_venta_total || 0;
+  const comision = hotel.comision_hotel || 0;
+  const costoNeto = precioVenta - comision;
+  const precioPorNoche = noches > 0 ? (precioVenta / noches) : 0;
 
   return (
-    <Card className="p-6">
-      <div className="flex items-center justify-between mb-4">
+    <Card className="p-6 border-[#00D4D4]/20 shadow-lg">
+      <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
-          <HotelIcon className="w-5 h-5 text-[#00D4D4]" />
+          <div className="bg-[#00D4D4]/10 p-2 rounded-full">
+            <Hotel className="w-5 h-5 text-[#00D4D4]" />
+          </div>
           <h3 className="font-semibold text-lg">Agregar Hotel</h3>
         </div>
-        <Button variant="ghost" size="sm" onClick={onCancelar}>
-          <X className="w-4 h-4" />
+        <Button variant="ghost" size="sm" onClick={onCancelar} className="hover:bg-red-50 hover:text-red-500">
+          <X className="w-5 h-5" />
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <Label>Nombre del hotel *</Label>
-          <Input
-            value={hotel.nombre_hotel || ''}
-            onChange={(e) => handleChange('nombre_hotel', e.target.value)}
-            placeholder="Ej: Hotel Fiesta Americana"
-          />
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="md:col-span-2">
+                <Label>Nombre del Hotel *</Label>
+                <Input value={hotel.nombre || ''} onChange={e => handleChange('nombre', e.target.value)} placeholder="Ej: Hotel Xcaret Arte" className="mt-1.5" />
+            </div>
+            <div>
+                <Label>Destino/Ubicación</Label>
+                <Input value={hotel.destino || ''} onChange={e => handleChange('destino', e.target.value)} placeholder="Ej: Riviera Maya" className="mt-1.5" />
+            </div>
+             <div>
+                <Label>Plan de Alimentación</Label>
+                <select value={hotel.plan_alimentacion} onChange={e => handleChange('plan_alimentacion', e.target.value)} className="w-full mt-1.5 p-2.5 border border-gray-200 rounded-md focus:ring-2 focus:ring-[#00D4D4] outline-none">
+                    <option value="sin_alimentos">Solo Habitación (EP)</option>
+                    <option value="desayuno">Con Desayuno (BB)</option>
+                    <option value="media_pension">Media Pensión (MAP)</option>
+                    <option value="pension_completa">Pensión Completa (AP)</option>
+                    <option value="todo_incluido">Todo Incluido (AI)</option>
+                </select>
+            </div>
         </div>
 
-        <div>
-          <Label>Categoría (estrellas)</Label>
-          <Input
-            type="number"
-            min="1"
-            max="5"
-            value={hotel.categoria || 3}
-            onChange={(e) => handleChange('categoria', parseInt(e.target.value))}
-          />
+        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <Label className="flex items-center gap-2 mb-1.5 text-xs font-medium text-slate-500"><Calendar className="w-3.5 h-3.5"/> CHECK-IN</Label>
+                <Input type="date" value={hotel.fecha_checkin || ''} onChange={e => handleChange('fecha_checkin', e.target.value)} className="bg-white" />
+            </div>
+            <div>
+                <Label className="flex items-center gap-2 mb-1.5 text-xs font-medium text-slate-500"><Calendar className="w-3.5 h-3.5"/> CHECK-OUT</Label>
+                <Input type="date" value={hotel.fecha_checkout || ''} onChange={e => handleChange('fecha_checkout', e.target.value)} className="bg-white" />
+            </div>
+             <div>
+                <Label className="mb-1.5 block text-xs font-medium text-slate-500 text-center">DURACIÓN</Label>
+                <div className="bg-white text-slate-700 font-bold py-2 px-3 rounded-md border border-slate-200 text-center flex items-center justify-center gap-2">
+                    <Clock className="w-4 h-4 text-[#00D4D4]" />
+                    {noches} noches
+                </div>
+            </div>
+            <div className="md:col-span-2">
+                <Label className="flex items-center gap-2 mb-1.5"><BedDouble className="w-4 h-4 text-slate-500"/> Tipo de Habitación</Label>
+                <Input value={hotel.tipo_habitacion || ''} onChange={e => handleChange('tipo_habitacion', e.target.value)} placeholder="Ej: Suite Vista al Mar" className="bg-white" />
+            </div>
+            <div>
+                <Label className="mb-1.5">No. Habitaciones</Label>
+                <Input type="number" min="1" value={hotel.num_habitaciones} onChange={e => handleChange('num_habitaciones', parseInt(e.target.value) || 1)} className="bg-white" />
+            </div>
         </div>
 
-        <div>
-          <Label>Ubicación *</Label>
-          <Input
-            value={hotel.ubicacion || ''}
-            onChange={(e) => handleChange('ubicacion', e.target.value)}
-            placeholder="Ej: Zona Hotelera Cancún"
-          />
-        </div>
-
-        <div>
-          <Label>Dirección</Label>
-          <Input
-            value={hotel.direccion || ''}
-            onChange={(e) => handleChange('direccion', e.target.value)}
-            placeholder="Dirección completa"
-          />
-        </div>
-
-        <div>
-          <Label>Fecha check-in *</Label>
-          <Input
-            type="date"
-            value={hotel.fecha_checkin || ''}
-            onChange={(e) => handleChange('fecha_checkin', e.target.value)}
-          />
-        </div>
-
-        <div>
-          <Label>Fecha check-out *</Label>
-          <Input
-            type="date"
-            value={hotel.fecha_checkout || ''}
-            onChange={(e) => handleChange('fecha_checkout', e.target.value)}
-          />
-        </div>
-
-        <div>
-          <Label>Número de noches</Label>
-          <Input
-            type="number"
-            min="1"
-            value={hotel.num_noches || 0}
-            onChange={(e) => handleChange('num_noches', parseInt(e.target.value))}
-            disabled
-            className="bg-gray-100"
-          />
-          <p className="text-xs text-gray-500 mt-1">Se calcula automáticamente</p>
-        </div>
-
-        <div>
-          <Label>Número de habitaciones *</Label>
-          <Input
-            type="number"
-            min="1"
-            value={hotel.num_habitaciones || 1}
-            onChange={(e) => handleChange('num_habitaciones', parseInt(e.target.value))}
-          />
-        </div>
-
-        <div>
-          <Label>Tipo de habitación</Label>
-          <Input
-            value={hotel.tipo_habitacion || ''}
-            onChange={(e) => handleChange('tipo_habitacion', e.target.value)}
-            placeholder="Ej: Doble vista al mar"
-          />
-        </div>
-
-        <div>
-          <Label>Plan alimenticio</Label>
-          <select
-            value={hotel.plan_alimenticio || ''}
-            onChange={(e) => handleChange('plan_alimenticio', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-          >
-            <option value="">Seleccionar...</option>
-            <option value="solo_habitacion">Solo habitación</option>
-            <option value="desayuno">Desayuno incluido</option>
-            <option value="media_pension">Media pensión</option>
-            <option value="pension_completa">Pensión completa</option>
-            <option value="todo_incluido">Todo incluido</option>
-          </select>
-        </div>
-
-        <div>
-          <Label>Costo por noche (por habitación) *</Label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              value={hotel.costo_por_noche || 0}
-              onChange={(e) => handleChange('costo_por_noche', parseFloat(e.target.value) || 0)}
-              className="pl-7"
-            />
-          </div>
-        </div>
-
-        <div>
-          <Label>Comisión del hotel</Label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              value={hotel.comision_hotel || 0}
-              onChange={(e) => handleChange('comision_hotel', parseFloat(e.target.value) || 0)}
-              className="pl-7"
-            />
-          </div>
+        <div className="bg-slate-800 p-5 rounded-xl text-white shadow-xl">
+           <h4 className="font-medium mb-4 flex items-center gap-2 text-[#00D4D4]"><DollarSign className="w-5 h-5" /> Costos de la Estancia</h4>
+           <div className="grid grid-cols-2 gap-6">
+             <div>
+               <label className="text-sm text-[#00D4D4] font-bold mb-1.5 block">Precio Total (Venta al Cliente)</label>
+               <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#00D4D4] font-bold">$</span>
+                  <Input type="number" min="0" step="0.01" value={hotel.precio_venta_total || ''} onChange={e => handleChange('precio_venta_total', parseFloat(e.target.value) || 0)} className="bg-slate-900/50 border-[#00D4D4] text-white pl-7 font-bold text-xl focus-visible:ring-[#00D4D4] h-12" placeholder="0.00" />
+               </div>
+             </div>
+             <div>
+               <label className="text-sm text-green-400 font-bold mb-1.5 block">Tu Comisión (Incluida)</label>
+               <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500">$</span>
+                  <Input type="number" min="0" step="0.01" value={hotel.comision_hotel || ''} onChange={e => handleChange('comision_hotel', parseFloat(e.target.value) || 0)} className="bg-green-900/20 border-green-500/50 text-green-400 font-bold pl-7 h-12 focus-visible:ring-green-500" placeholder="0.00" />
+               </div>
+             </div>
+           </div>
+           <div className="mt-6 pt-4 border-t border-slate-700 grid grid-cols-2 gap-4">
+                <div className="bg-slate-700/50 p-3 rounded-lg">
+                    <p className="text-slate-400 text-xs uppercase font-bold flex items-center gap-1"><Calculator className="w-3 h-3" /> Costo Neto (Base)</p>
+                    <p className="text-lg font-medium text-white mt-1">${costoNeto.toLocaleString('es-MX', {minimumFractionDigits: 2})}</p>
+                </div>
+                <div className="bg-slate-700/50 p-3 rounded-lg">
+                    <p className="text-slate-400 text-xs uppercase font-bold">Precio Promedio por Noche</p>
+                    <p className="text-lg font-medium text-[#00D4D4] mt-1">${precioPorNoche.toLocaleString('es-MX', {minimumFractionDigits: 2})}</p>
+                </div>
+           </div>
         </div>
       </div>
-
-      {/* Totales */}
-      <div className="mt-6 bg-gray-50 p-4 rounded-lg">
-        <div className="grid grid-cols-3 gap-4 text-sm">
-          <div>
-            <p className="text-gray-600">Costo base</p>
-            <p className="font-semibold text-lg">
-              ${costoTotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-            </p>
-            <p className="text-xs text-gray-500">
-              ${(hotel.costo_por_noche || 0).toFixed(2)} × {hotel.num_noches || 0} noches × {hotel.num_habitaciones || 1} hab
-            </p>
-          </div>
-          <div>
-            <p className="text-gray-600">Comisión</p>
-            <p className="font-semibold text-lg text-green-600">
-              +${(hotel.comision_hotel || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-            </p>
-          </div>
-          <div>
-            <p className="text-gray-600">Total</p>
-            <p className="font-semibold text-xl text-[#00D4D4]">
-              ${totalConComision.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Botones */}
-      <div className="mt-6 flex gap-3">
-        <Button onClick={handleSubmit} className="flex-1 bg-[#00D4D4] hover:bg-[#00B8B8]">
-          Agregar Hotel
-        </Button>
-        <Button onClick={onCancelar} variant="outline" className="flex-1">
-          Cancelar
-        </Button>
+      <div className="mt-6 pt-4 border-t flex justify-end gap-3">
+         <Button variant="outline" onClick={onCancelar}>Cancelar</Button>
+         <Button onClick={handleSubmit} className="bg-[#00D4D4] hover:bg-[#00B8B8] px-8">Agregar Hotel</Button>
       </div>
     </Card>
   );
 }
 
-// Lista de hoteles agregados
-interface HotelesListaProps {
-  hoteles: Hotel[];
-  onEliminar: (id: string) => void;
-}
-
-export function HotelesLista({ hoteles, onEliminar }: HotelesListaProps) {
-  if (hoteles.length === 0) {
+export function HotelesLista({ hoteles, onEliminar }: { hoteles: HotelItem[], onEliminar: (id: string) => void }) {
+  if (!hoteles || hoteles.length === 0) {
     return (
-      <Card className="p-6 text-center text-gray-500">
-        <HotelIcon className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-        <p>No se han agregado hoteles</p>
+      <Card className="p-6 text-center text-gray-500 border-dashed bg-gray-50/50">
+        <Hotel className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+        <p>No hay hoteles agregados</p>
       </Card>
     );
   }
 
-  const totalHoteles = hoteles.reduce((sum, h) => sum + h.costo_total, 0);
-  const totalComisiones = hoteles.reduce((sum, h) => sum + h.comision_hotel, 0);
-  const totalGeneral = hoteles.reduce((sum, h) => sum + h.total_con_comision, 0);
-
   return (
     <div className="space-y-3">
       {hoteles.map((hotel) => (
-        <Card key={hotel.id} className="p-4">
-          <div className="flex justify-between items-start">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
-                <HotelIcon className="w-4 h-4 text-[#00D4D4]" />
-                <span className="font-semibold">{hotel.nombre_hotel}</span>
-                <span className="text-yellow-500">{'⭐'.repeat(hotel.categoria)}</span>
+        <Card key={hotel.id} className="p-4 hover:border-[#00D4D4] transition-all group">
+          <div className="flex justify-between">
+              <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                      <div className="bg-[#00D4D4]/10 p-1.5 rounded-md"><Hotel className="w-5 h-5 text-[#00D4D4]" /></div>
+                      <h4 className="font-bold text-lg text-slate-700">{hotel.nombre}</h4>
+                  </div>
+                  <div className="text-sm text-gray-600 space-y-1 ml-9">
+                      <p className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-gray-400" /> {hotel.destino}</p>
+                      <p><span className="font-medium text-slate-900">{hotel.tipo_habitacion}</span> {' • '} {hotel.num_noches} noches</p>
+                      <div className="flex gap-2 mt-1">
+                         <span className="text-xs bg-slate-100 px-2 py-0.5 rounded uppercase font-medium text-slate-500">{hotel.plan_alimentacion.replace('_', ' ')}</span>
+                         <span className="text-xs text-slate-400 flex items-center"><Calendar className="w-3 h-3 mr-1"/>{new Date(hotel.fecha_checkin).toLocaleDateString('es-MX', {day: '2-digit', month: 'short'})} - {new Date(hotel.fecha_checkout).toLocaleDateString('es-MX', {day: '2-digit', month: 'short'})}</span>
+                      </div>
+                  </div>
               </div>
-              
-              <div className="text-sm space-y-1">
-                <p className="text-gray-600">{hotel.ubicacion}</p>
-                <p className="text-gray-600">
-                  Check-in: {hotel.fecha_checkin} | Check-out: {hotel.fecha_checkout}
-                </p>
-                <p className="text-gray-600">
-                  {hotel.num_noches} noche(s) • {hotel.num_habitaciones} habitación(es)
-                </p>
-                {hotel.tipo_habitacion && (
-                  <p className="text-gray-600">Tipo: {hotel.tipo_habitacion}</p>
-                )}
-                {hotel.plan_alimenticio && (
-                  <span className="inline-block text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded mt-1">
-                    {hotel.plan_alimenticio}
-                  </span>
-                )}
+              <div className="text-right flex flex-col justify-between min-w-[120px]">
+                  <div>
+                      <p className="text-xs text-slate-500 mb-1">Precio Total</p>
+                      <p className="font-bold text-xl text-[#00D4D4]">${hotel.precio_venta_total.toLocaleString('es-MX', {minimumFractionDigits: 2})}</p>
+                      {hotel.comision_hotel > 0 && (<p className="text-xs text-green-600 font-medium mt-1">(Ganancia: ${hotel.comision_hotel.toLocaleString('es-MX', {minimumFractionDigits: 2})})</p>)}
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => onEliminar(hotel.id)} className="text-red-500 hover:bg-red-50 self-end opacity-0 group-hover:opacity-100 transition-opacity px-2"><X className="w-4 h-4 mr-1" /> Eliminar</Button>
               </div>
-            </div>
-            
-            <div className="text-right ml-4">
-              <div className="mb-2">
-                <p className="text-xs text-gray-500">Base</p>
-                <p className="font-medium">${hotel.costo_total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
-              </div>
-              <div className="mb-2">
-                <p className="text-xs text-gray-500">Comisión</p>
-                <p className="font-medium text-green-600">+${hotel.comision_hotel.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
-              </div>
-              <div className="mb-3">
-                <p className="text-xs text-gray-500">Total</p>
-                <p className="font-bold text-lg text-[#00D4D4]">
-                  ${hotel.total_con_comision.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onEliminar(hotel.id)}
-                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
           </div>
         </Card>
       ))}
-
-      {/* Totales generales */}
-      <Card className="p-4 bg-gray-50">
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <p className="text-sm text-gray-600">Total hoteles</p>
-            <p className="text-lg font-bold">${totalHoteles.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-600">Total comisiones</p>
-            <p className="text-lg font-bold text-green-600">${totalComisiones.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-600">Total general</p>
-            <p className="text-xl font-bold text-[#00D4D4]">${totalGeneral.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
-          </div>
-        </div>
-      </Card>
     </div>
   );
 }

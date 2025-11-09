@@ -8,7 +8,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card } from "@/components/ui/card"
-import { VueloForm, VuelosLista } from '@/components/cotizaciones/VueloForm';
+//import { VueloForm, VuelosLista } from '@/components/cotizaciones/VueloForm';
+// Agrega HotelForm y HotelesLista a tus imports
+import { VueloForm, VuelosLista, type Vuelo } from '@/components/cotizaciones/VueloForm';
+import { HotelForm, HotelesLista, type HotelItem } from '@/components/cotizaciones/HotelForm';
 import {
   User,
   Users,
@@ -369,34 +372,15 @@ export default function NewQuotationPage() {
     setVuelos(vuelos.filter(v => v.id !== idToDelete));
   };
 
-  const handleAddHotel = () => {
-    if (!newHotel.nombre) {
-      setError('Completa el nombre del hotel')
-      return
-    }
-    // Permitir costo en cero
-    setHoteles([...hoteles, { ...newHotel }])
-    // DENTRO DE handleAddHotel (aprox. línea 342)
-// REEMPLAZA el setNewHotel(...)
-    setNewHotel({
-      nombre: "",
-      num_habitaciones: 1,
-      tipo_habitacion: "doble",
-      incluye: "desayuno",
-      fecha_checkin: destinoData.fecha_salida,
-      fecha_checkout: destinoData.fecha_regreso,
-      num_noches: 0, // Se recalculará solo
-      costo_total: 0,
-      precio_venta_total: 0, // <-- AÑADIDO
-      comision_hotel: 0, // <-- AÑADIDO
-    })
-    setError(null)
-// ...
-  }
+  // ✅ Función simplificada para agregar hoteles
+  const handleAgregarHotel = (nuevoHotel: HotelItem) => {
+    setHoteles([...hoteles, nuevoHotel]);
+  };
 
-  const handleRemoveHotel = (index: number) => {
-    setHoteles(hoteles.filter((_, i) => i !== index))
-  }
+  // ✅ Función corregida para eliminar por ID
+  const handleEliminarHotel = (idToDelete: string) => {
+    setHoteles(hoteles.filter(h => h.id !== idToDelete));
+  };
 
   const handleAddTour = () => {
     if (!newTour.nombre) {
@@ -455,7 +439,7 @@ const calcularCostoVuelos = () => {
 }
 
   const calcularCostoHoteles = () => {
-    return hoteles.reduce((total, hotel) => total + (hotel.costo_total || 0), 0)
+    return hoteles.reduce((total, hotel) => total + (hotel.precio_venta_total || 0), 0)
   }
 
   const calcularCostoTours = () => {
@@ -477,17 +461,36 @@ const calcularCostoVuelos = () => {
   }
 
   const calcularPrecioFinal = () => {
-    // Suma de todos los precios de venta de cada servicio
-    const precioVuelos = vuelos.reduce((total, v) => total + (v.precio_venta_por_persona * (selectedPasajeros.length || 1)), 0)
-    const precioHoteles = hoteles.reduce((total, h) => total + (h.precio_venta_total || 0), 0)
-    const precioTours = tours.reduce((total, t) => total + (t.precio_venta_por_persona * (selectedPasajeros.length || 1)), 0)
-    const precioTransporte = transportaciones.reduce((total, tr) => total + (tr.precio_venta_total || 0), 0)
-    const precioSeguro = seguroData.precio_venta_total || 0
+    // 1. Definimos el número global de pasajeros (Cliente + Seleccionados)
+    const numPaxGlobal = 1 + selectedPasajeros.length;
+
+    // 2. Sumamos cada servicio de forma SEGURA (evitando NaN)
     
-    // Sumamos los "otros_costos" (que no tienen precio de venta, se pasan directo)
-    const otros = costosData.otros_costos || 0
-    
-    return precioVuelos + precioHoteles + precioTours + precioTransporte + precioSeguro + otros
+    // Vuelos: Usamos el total ya calculado por el formulario, o lo recalculamos si hace falta
+    const totalVuelos = vuelos.reduce((sum, v) => {
+      // Opción A: Si tu componente VueloForm ya guarda 'total_con_comision', úsalo:
+      return sum + (Number(v.total_con_comision) || 0);
+      // Opción B (Alternativa si no tienes ese campo):
+      // const precioUnitario = (Number(v.costo_unitario) || 0) + (Number(v.comision_vuelo) || 0);
+      // const paxVuelo = v.cantidad_pasajeros || numPaxGlobal;
+      // return sum + (precioUnitario * paxVuelo);
+    }, 0);
+
+    // Hoteles: Usamos el precio de venta total directo
+    const totalHoteles = hoteles.reduce((sum, h) => sum + (Number(h.precio_venta_total) || 0), 0);
+
+    // Tours: Asumimos que aplica para todos los pasajeros (ajusta si Tours también tiene selector de cantidad)
+    const totalTours = tours.reduce((sum, t) => sum + ((Number(t.precio_venta_por_persona) || 0) * numPaxGlobal), 0);
+
+    // Transportes: Usamos el precio total directo
+    const totalTransportes = transportaciones.reduce((sum, tr) => sum + (Number(tr.precio_venta_total) || 0), 0);
+
+    // Otros
+    const totalSeguros = Number(seguroData.precio_venta_total) || 0;
+    const totalOtros = Number(costosData.otros_costos) || 0;
+
+    // 3. Gran Total
+    return totalVuelos + totalHoteles + totalTours + totalTransportes + totalSeguros + totalOtros;
   }
 
   const filteredClients = clientes.filter(client => {
@@ -1194,214 +1197,42 @@ const calcularCostoVuelos = () => {
           </div>
         )
 
-      case 5:
+      case 5: {
+        // ✅ Usamos la función general para obtener el Gran Total acumulado
+        const granTotalHastaAhora = calcularPrecioFinal();
+        
         return (
           <div className="space-y-6">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="font-semibold text-lg">Hoteles agregados</h3>
-                <p className="text-sm text-gray-600">{hoteles.length} hotel(es)</p>
+                <h3 className="font-semibold text-lg">Hospedaje</h3>
+                <p className="text-sm text-gray-600">Agrega los hoteles para el viaje</p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-gray-600">Total Hoteles</p>
+                {/* ✅ CAMBIO DE TEXTO Y VALOR: Total Cotización */}
+                <p className="text-sm text-gray-600">Total Cotización</p>
                 <p className="text-2xl font-bold text-[#00D4D4]">
-                  ${calcularCostoHoteles().toLocaleString()}
+                  ${granTotalHastaAhora.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                 </p>
               </div>
             </div>
 
-            {hoteles.length > 0 && (
-              <div className="space-y-3 mb-6">
-                {hoteles.map((hotel, index) => (
-                  <div key={index} className="bg-gray-50 p-4 rounded-lg">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Hotel className="w-5 h-5 text-[#00D4D4]" />
-                          <p className="font-semibold">{hotel.nombre}</p>
-                        </div>
-                        <p className="text-sm text-gray-700">
-                          {hotel.num_habitaciones} hab. {hotel.tipo_habitacion} • {hotel.num_noches} noches
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          Incluye: {hotel.incluye}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          {hotel.fecha_checkin} → {hotel.fecha_checkout}
-                        </p>
-                        <p className="text-sm font-medium text-gray-900 mt-2">
-                          Total: ${hotel.costo_total.toLocaleString()}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => handleRemoveHotel(index)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            {/* Lista de hoteles */}
+            <HotelesLista hoteles={hoteles} onEliminar={handleEliminarHotel} />
 
-            <div className="border-t pt-6">
-              <h4 className="font-semibold mb-4">Agregar nuevo hotel</h4>
-              
-              {/* --- LÓGICA DE CÁLCULO EN VIVO --- */}
-              {(() => {
-                const costoNeto = newHotel.costo_total || 0
-                const precioVenta = newHotel.precio_venta_total || 0
-                const noches = newHotel.num_noches || 1
-                
-                const precioVentaPorNoche = (precioVenta / noches) || 0
-                const utilidadHotel = (precioVenta - costoNeto) || 0
-                
-                return (
-                  <div className="space-y-4">
-                    <div>
-                      <Label>Nombre del Hotel *</Label>
-                      <Input
-                        value={newHotel.nombre}
-                        onChange={(e) => setNewHotel({ ...newHotel, nombre: e.target.value })}
-                        placeholder="Ej: Hotel Cancún Palace"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Número de Habitaciones</Label>
-                        <Input
-                          type="number"
-                          value={newHotel.num_habitaciones}
-                          onChange={(e) => setNewHotel({ ...newHotel, num_habitaciones: parseInt(e.target.value) || 1 })}
-                          min="1"
-                        />
-                      </div>
-                      <div>
-                        <Label>Tipo de Habitación</Label>
-                        <select
-                          value={newHotel.tipo_habitacion}
-                          onChange={(e) => setNewHotel({ ...newHotel, tipo_habitacion: e.target.value })}
-                          className="w-full p-2 border rounded-lg"
-                        >
-                          <option value="sencilla">Sencilla</option>
-                          <option value="doble">Doble</option>
-                          <option value="triple">Triple</option>
-                          <option value="suite">Suite</option>
-                        </select>
-                      </div>
-                      <div>
-                        <Label>Check-in</Label>
-                        <Input
-                          type="date"
-                          value={newHotel.fecha_checkin}
-                          onChange={(e) => setNewHotel({ ...newHotel, fecha_checkin: e.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <Label>Check-out</Label>
-                        <Input
-                          type="date"
-                          value={newHotel.fecha_checkout}
-                          onChange={(e) => setNewHotel({ ...newHotel, fecha_checkout: e.target.value })}
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <Label>¿Qué incluye?</Label>
-                      <select
-                        value={newHotel.incluye}
-                        onChange={(e) => setNewHotel({ ...newHotel, incluye: e.target.value })}
-                        className="w-full p-2 border rounded-lg"
-                      >
-                        <option value="sin_alimentos">Sin alimentos</option>
-                        <option value="desayuno">Desayuno incluido</option>
-                        <option value="media_pension">Media pensión</option>
-                        <option value="pension_completa">Pensión completa</option>
-                        <option value="todo_incluido">Todo incluido</option>
-                      </select>
-                    </div>
-                    
-                    {/* --- NUEVOS CAMPOS DE COSTO Y PRECIO --- */}
-                    <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-                      <div>
-                        <Label>Costo Total (Neto)</Label>
-                        <Input
-                          type="number"
-                          value={newHotel.costo_total}
-                          onChange={(e) => setNewHotel({ ...newHotel, costo_total: parseFloat(e.target.value) || 0 })}
-                          placeholder="0.00"
-                          min="0"
-                          step="0.01"
-                        />
-                      </div>
-                      <div>
-                        <Label>Precio de Venta Total</Label>
-                        <Input
-                          type="number"
-                          value={newHotel.precio_venta_total}
-                          onChange={(e) => setNewHotel({ ...newHotel, precio_venta_total: parseFloat(e.target.value) || 0 })}
-                          placeholder="0.00"
-                          min="0"
-                          step="0.01"
-                        />
-                      </div>
-                      <div>
-                        <Label>Comisión (Monto Fijo)</Label>
-                        <Input
-                          type="number"
-                          value={newHotel.comision_hotel}
-                          onChange={(e) => setNewHotel({ ...newHotel, comision_hotel: parseFloat(e.target.value) || 0 })}
-                          placeholder="0.00"
-                          min="0"
-                          step="0.01"
-                        />
-                      </div>
-                    </div>
-
-                    {/* --- CAMPOS CALCULADOS --- */}
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <Label>Noches (Auto)</Label>
-                        <Input
-                          type="number"
-                          value={newHotel.num_noches}
-                          readOnly
-                          className="bg-gray-100"
-                        />
-                      </div>
-                      <div>
-                        <Label>Precio Venta / Noche</Label>
-                        <Input
-                          value={precioVentaPorNoche.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}
-                          readOnly
-                          className="bg-gray-100"
-                        />
-                      </div>
-                       <div>
-                        <Label>Utilidad (Auto)</Label>
-                        <Input
-                          value={utilidadHotel.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}
-                          readOnly
-                          className="bg-green-100 border-green-300"
-                        />
-                      </div>
-                    </div>
-                    
-                  </div>
-                )
-              })()}
-              
-              <Button
-                onClick={handleAddHotel}
-                className="w-full mt-4 bg-[#00D4D4] hover:bg-[#00D4D4]/90"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Agregar Hotel
-              </Button>
+            <div className="mt-6">
+              {/* Formulario nuevo */}
+              <HotelForm 
+                onAgregar={handleAgregarHotel}
+                onCancelar={() => {}}
+                defaultDestino={destinoData.destino}
+                defaultCheckin={destinoData.fecha_salida}
+                defaultCheckout={destinoData.fecha_regreso}
+              />
             </div>
           </div>
         )
+      }
 
       case 6:
         return (
