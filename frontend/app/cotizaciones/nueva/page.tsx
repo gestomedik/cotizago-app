@@ -12,6 +12,7 @@ import { Card } from "@/components/ui/card"
 // Agrega HotelForm y HotelesLista a tus imports
 import { VueloForm, VuelosLista, type Vuelo } from '@/components/cotizaciones/VueloForm';
 import { HotelForm, HotelesLista, type HotelItem } from '@/components/cotizaciones/HotelForm';
+import { TourForm, ToursLista, type Tour } from '@/components/cotizaciones/TourForm';
 import {
   User,
   Users,
@@ -103,20 +104,6 @@ interface HotelItem {
   costo_total: number
   precio_venta_total: number // <-- AÑADIDO
   comision_hotel: number // <-- AÑADIDO
-}
-
-interface Tour {
-  nombre: string
-  descripcion: string
-  fecha: string
-  hora_inicio: string
-  duracion_horas: number
-  costo_por_persona: number
-  precio_venta_por_persona: number // <-- AÑADIDO
-  comision_tour: number // <-- AÑADIDO
-  proveedor: string // <-- AÑADIDO
-  incluye: string
-  notas: string // <-- AÑADIDO
 }
 
 interface Transportacion {
@@ -382,32 +369,13 @@ export default function NewQuotationPage() {
     setHoteles(hoteles.filter(h => h.id !== idToDelete));
   };
 
-  const handleAddTour = () => {
-    if (!newTour.nombre) {
-      setError('Completa el nombre del tour')
-      return
-    }
-    // Permitir costo en cero
-    setTours([...tours, { ...newTour }])
-    setNewTour({
-      nombre: "",
-      descripcion: "",
-      fecha: "",
-      hora_inicio: "",
-      duracion_horas: 0,
-      costo_por_persona: 0,
-      precio_venta_por_persona: 0, // <-- AÑADIDO
-      comision_tour: 0, // <-- AÑADIDO
-      proveedor: "", // <-- AÑADIDO
-      incluye: "",
-      notas: "", // <-- AÑADIDO
-    })
-    setError(null)
-  }
+  const handleAgregarTour = (nuevoTour: TourItem) => {
+    setTours([...tours, nuevoTour]);
+  };
 
-  const handleRemoveTour = (index: number) => {
-    setTours(tours.filter((_, i) => i !== index))
-  }
+  const handleEliminarTour = (idToDelete: string) => {
+    setTours(tours.filter(t => t.id !== idToDelete));
+  };
 
   const handleAddTransportacion = () => {
     if (!newTransportacion.descripcion) {
@@ -461,35 +429,22 @@ const calcularCostoVuelos = () => {
   }
 
   const calcularPrecioFinal = () => {
-    // 1. Definimos el número global de pasajeros (Cliente + Seleccionados)
-    const numPaxGlobal = 1 + selectedPasajeros.length;
-
-    // 2. Sumamos cada servicio de forma SEGURA (evitando NaN)
+    // 1. Vuelos (usa 'total_con_comision')
+    const totalVuelos = vuelos.reduce((sum, v) => sum + (Number(v.total_con_comision) || 0), 0);
     
-    // Vuelos: Usamos el total ya calculado por el formulario, o lo recalculamos si hace falta
-    const totalVuelos = vuelos.reduce((sum, v) => {
-      // Opción A: Si tu componente VueloForm ya guarda 'total_con_comision', úsalo:
-      return sum + (Number(v.total_con_comision) || 0);
-      // Opción B (Alternativa si no tienes ese campo):
-      // const precioUnitario = (Number(v.costo_unitario) || 0) + (Number(v.comision_vuelo) || 0);
-      // const paxVuelo = v.cantidad_pasajeros || numPaxGlobal;
-      // return sum + (precioUnitario * paxVuelo);
-    }, 0);
-
-    // Hoteles: Usamos el precio de venta total directo
+    // 2. Hoteles (usa 'precio_venta_total')
     const totalHoteles = hoteles.reduce((sum, h) => sum + (Number(h.precio_venta_total) || 0), 0);
-
-    // Tours: Asumimos que aplica para todos los pasajeros (ajusta si Tours también tiene selector de cantidad)
-    const totalTours = tours.reduce((sum, t) => sum + ((Number(t.precio_venta_por_persona) || 0) * numPaxGlobal), 0);
-
-    // Transportes: Usamos el precio total directo
-    const totalTransportes = transportaciones.reduce((sum, tr) => sum + (Number(tr.precio_venta_total) || 0), 0);
-
-    // Otros
+    
+    // 3. Tours (✅ CORREGIDO: usa 'precio_venta_total' directamente)
+    const totalTours = tours.reduce((sum, t) => sum + (Number(t.precio_venta_total) || 0), 0);
+    
+    // 4. Transportes (usa la lógica antigua por ahora)
+    const totalTransportes = transportaciones.reduce((sum, tr) => sum + (Number(tr.costo_total) || 0), 0);
+    
+    // 5. Seguros y Otros
     const totalSeguros = Number(seguroData.precio_venta_total) || 0;
     const totalOtros = Number(costosData.otros_costos) || 0;
 
-    // 3. Gran Total
     return totalVuelos + totalHoteles + totalTours + totalTransportes + totalSeguros + totalOtros;
   }
 
@@ -1234,201 +1189,45 @@ const calcularCostoVuelos = () => {
         )
       }
 
-      case 6:
+      case 6: {
+        // ✅ CÁLCULO INTELIGENTE DE PASAJEROS
+        // Adultos: El cliente principal (1) + los pasajeros adicionales que sean 'adulto'
+        const numAdultosTotal = 1 + selectedPasajeros.filter(p => p.tipo_pasajero === 'adulto').length;
+        // Niños: Sumamos 'nino' e 'infante'
+        const numNinosTotal = selectedPasajeros.filter(p => p.tipo_pasajero === 'nino' || p.tipo_pasajero === 'infante').length;
+
         return (
           <div className="space-y-6">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="font-semibold text-lg">Tours agregados</h3>
-                <p className="text-sm text-gray-600">
-                  {tours.length} tour(s) • {selectedPasajeros.length} pasajero(s)
-                </p>
+                <h3 className="font-semibold text-lg">Tours y Actividades</h3>
+                <p className="text-sm text-gray-600">Agrega excursiones y experiencias</p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-gray-600">Total Tours</p>
+                <p className="text-sm text-gray-600">Total Cotización</p>
+                {/* ✅ El total ahora se actualizará correctamente al agregar tours */}
                 <p className="text-2xl font-bold text-[#00D4D4]">
-                  ${calcularCostoTours().toLocaleString()}
+                  ${calcularPrecioFinal().toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                 </p>
               </div>
             </div>
 
-            {tours.length > 0 && (
-              <div className="space-y-3 mb-6">
-                {tours.map((tour, index) => (
-                  <div key={index} className="bg-gray-50 p-4 rounded-lg">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Ticket className="w-5 h-5 text-[#00D4D4]" />
-                          <p className="font-semibold">{tour.nombre}</p>
-                        </div>
-                        {tour.descripcion && (
-                          <p className="text-sm text-gray-600 mb-2">{tour.descripcion}</p>
-                        )}
-                        <p className="text-sm text-gray-700">
-                          📅 {tour.fecha} • ⏰ {tour.hora_inicio} • ⌚ {tour.duracion_horas}h
-                        </p>
-                        {tour.incluye && (
-                          <p className="text-sm text-gray-600 mt-1">Incluye: {tour.incluye}</p>
-                        )}
-                        <p className="text-sm font-medium text-gray-900 mt-2">
-                          ${tour.costo_por_persona.toLocaleString()} × {selectedPasajeros.length} = ${(tour.costo_por_persona * selectedPasajeros.length).toLocaleString()}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => handleRemoveTour(index)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <ToursLista tours={tours} onEliminar={handleEliminarTour} />
 
-            <div className="border-t pt-6">
-              <h4 className="font-semibold mb-4">Agregar nuevo tour</h4>
-
-              {/* --- LÓGICA DE CÁLCULO EN VIVO --- */}
-              {(() => {
-                const costoNeto = newTour.costo_por_persona || 0
-                const precioVenta = newTour.precio_venta_por_persona || 0
-                const utilidadTour = (precioVenta - costoNeto) || 0
-                
-                return (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Nombre del Tour *</Label>
-                        <Input
-                          value={newTour.nombre}
-                          onChange={(e) => setNewTour({ ...newTour, nombre: e.target.value })}
-                          placeholder="Ej: Tour por Chichen Itzá"
-                        />
-                      </div>
-                      <div>
-                        <Label>Proveedor</Label>
-                        <Input
-                          value={newTour.proveedor}
-                          onChange={(e) => setNewTour({ ...newTour, proveedor: e.target.value })}
-                          placeholder="Ej: Tours y Aventuras S.A."
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <Label>Descripción</Label>
-                      <Textarea
-                        value={newTour.descripcion}
-                        onChange={(e) => setNewTour({ ...newTour, descripcion: e.target.value })}
-                        placeholder="Describe el tour..."
-                        rows={2}
-                      />
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <Label>Fecha del Tour</Label>
-                        <Input
-                          type="date"
-                          value={newTour.fecha}
-                          onChange={(e) => setNewTour({ ...newTour, fecha: e.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <Label>Hora de Inicio</Label>
-                        <Input
-                          type="time"
-                          value={newTour.hora_inicio}
-                          onChange={(e) => setNewTour({ ...newTour, hora_inicio: e.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <Label>Duración (horas)</Label>
-                        <Input
-                          type="number"
-                          value={newTour.duracion_horas}
-                          onChange={(e) => setNewTour({ ...newTour, duracion_horas: parseFloat(e.target.value) || 0 })}
-                          placeholder="0"
-                          step="0.5"
-                          min="0"
-                        />
-                      </div>
-                    </div>
-
-                    {/* --- NUEVOS CAMPOS DE COSTO Y PRECIO --- */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t">
-                      <div>
-                        <Label>Costo (Neto) p/p</Label>
-                        <Input
-                          type="number"
-                          value={newTour.costo_por_persona}
-                          onChange={(e) => setNewTour({ ...newTour, costo_por_persona: parseFloat(e.target.value) || 0 })}
-                          placeholder="0.00"
-                          min="0"
-                        />
-                      </div>
-                      <div>
-                        <Label>Precio Venta p/p</Label>
-                        <Input
-                          type="number"
-                          value={newTour.precio_venta_por_persona}
-                          onChange={(e) => setNewTour({ ...newTour, precio_venta_por_persona: parseFloat(e.target.value) || 0 })}
-                          placeholder="0.00"
-                          min="0"
-                        />
-                      </div>
-                      <div>
-                        <Label>Comisión p/p</Label>
-                        <Input
-                          type="number"
-                          value={newTour.comision_tour}
-                          onChange={(e) => setNewTour({ ...newTour, comision_tour: parseFloat(e.target.value) || 0 })}
-                          placeholder="0.00"
-                          min="0"
-                        />
-                      </div>
-                      <div>
-                        <Label>Utilidad p/p (Auto)</Label>
-                        <Input
-                          value={utilidadTour.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}
-                          readOnly
-                          className="bg-green-100 border-green-300"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label>¿Qué incluye?</Label>
-                      <Input
-                        value={newTour.incluye}
-                        onChange={(e) => setNewTour({ ...newTour, incluye: e.target.value })}
-                        placeholder="Ej: Transporte, guía, comida"
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label>Notas Adicionales</Label>
-                      <Textarea
-                        value={newTour.notas}
-                        onChange={(e) => setNewTour({ ...newTour, notas: e.target.value })}
-                        placeholder="Restricciones, puntos de encuentro, etc."
-                        rows={2}
-                      />
-                    </div>
-                  </div>
-                )
-              })()}
-              
-              <Button
-                onClick={handleAddTour}
-                className="w-full mt-4 bg-[#00D4D4] hover:bg-[#00D4D4]/90"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Agregar Tour
-              </Button>
+            <div className="mt-6">
+              <TourForm 
+                onAgregar={handleAgregarTour}
+                onCancelar={() => {}}
+                // ✅ Pasamos los defaults calculados
+                defaultUbicacion={destinoData.destino}
+                defaultFecha={destinoData.fecha_salida}
+                defaultNumAdultos={numAdultosTotal}
+                defaultNumNinos={numNinosTotal}
+              />
             </div>
           </div>
         )
+      }
 
       case 7:
         return (

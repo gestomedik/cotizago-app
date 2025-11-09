@@ -615,38 +615,52 @@ class CotizacionController {
      */
     private function insertarTour($cotizacion_id, $tour) {
         $sql = "INSERT INTO cotizacion_tours (
-                    cotizacion_id, nombre_tour, proveedor,
-                    destino, fecha_tour, duracion,
-                    num_personas, incluye,
-                    costo_por_persona, costo_total,
-                    precio_venta_por_persona, precio_venta_total, -- AÑADIDOS
-                    comision_tour, utilidad, notas -- AÑADIDOS
+                    cotizacion_id, nombre_tour, proveedor, ubicacion,
+                    fecha_tour, hora_inicio, duracion,
+                    cantidad_adultos, cantidad_ninos, num_personas,
+                    incluye, no_incluye,
+                    precio_venta_adulto, precio_venta_nino, precio_venta_total,
+                    comision_tour, costo_total, utilidad, notas
                 ) VALUES (
-                    :cotizacion_id, :nombre_tour, :proveedor,
-                    :destino, :fecha_tour, :duracion,
-                    :num_personas, :incluye,
-                    :costo_por_persona, :costo_total,
-                    :precio_venta_por_persona, :precio_venta_total, -- AÑADIDOS
-                    :comision_tour, :utilidad, :notas -- AÑADIDOS
+                    :cotizacion_id, :nombre_tour, :proveedor, :ubicacion,
+                    :fecha_tour, :hora_inicio, :duracion,
+                    :cantidad_adultos, :cantidad_ninos, :num_personas,
+                    :incluye, :no_incluye,
+                    :precio_venta_adulto, :precio_venta_nino, :precio_venta_total,
+                    :comision_tour, :costo_total, :utilidad, :notas
                 )";
         
         $stmt = $this->conn->prepare($sql);
         
-        $stmt->bindParam(':cotizacion_id', $cotizacion_id);
-        $stmt->bindParam(':nombre_tour', $tour['nombre_tour']);
-        $stmt->bindParam(':proveedor', $tour['proveedor']);
-        $stmt->bindParam(':destino', $tour['destino']);
-		$stmt->bindParam(':fecha_tour', $tour['fecha_tour']);
-        $stmt->bindParam(':duracion', $tour['duracion']);
-        $stmt->bindParam(':num_personas', $tour['num_personas']); // ¡CORREGIDO!
-        $stmt->bindParam(':incluye', $tour['incluye']);
-        $stmt->bindParam(':costo_por_persona', $tour['costo_por_persona']);
-        $stmt->bindParam(':costo_total', $tour['costo_total']);
-        $stmt->bindParam(':precio_venta_por_persona', $tour['precio_venta_por_persona']);
-        $stmt->bindParam(':precio_venta_total', $tour['precio_venta_total']);
-        $stmt->bindParam(':comision_tour', $tour['comision_tour']);
-        $stmt->bindParam(':utilidad', $tour['utilidad']);
-        $stmt->bindParam(':notas', $tour['notas']);
+        $stmt->bindValue(':cotizacion_id', $cotizacion_id);
+        $stmt->bindValue(':nombre_tour', $tour['nombre_tour']);
+        $stmt->bindValue(':proveedor', $tour['proveedor'] ?? '');
+        $stmt->bindValue(':ubicacion', $tour['ubicacion'] ?? '');
+        $stmt->bindValue(':fecha_tour', $tour['fecha_tour']);
+        $stmt->bindValue(':hora_inicio', $tour['hora_inicio'] ?? null);
+        // Guardamos la duración como número si es posible, o texto
+        $stmt->bindValue(':duracion', $tour['duracion_horas'] ?? 0);
+
+        // Cantidades
+        $adultos = $tour['cantidad_adultos'] ?? 1;
+        $ninos = $tour['cantidad_ninos'] ?? 0;
+        $stmt->bindValue(':cantidad_adultos', $adultos);
+        $stmt->bindValue(':cantidad_ninos', $ninos);
+        $stmt->bindValue(':num_personas', $adultos + $ninos);
+        
+        // Detalles
+        $stmt->bindValue(':incluye', $tour['incluye'] ?? '');
+        $stmt->bindValue(':no_incluye', $tour['no_incluye'] ?? ''); // Asegúrate de tener esta columna en BD si la usas
+
+        // Costos (Nueva Lógica)
+        $stmt->bindValue(':precio_venta_adulto', $tour['precio_venta_adulto'] ?? 0);
+        $stmt->bindValue(':precio_venta_nino', $tour['precio_venta_nino'] ?? 0);
+        $stmt->bindValue(':precio_venta_total', $tour['precio_venta_total'] ?? 0);
+        $stmt->bindValue(':comision_tour', $tour['comision_tour'] ?? 0);
+        $stmt->bindValue(':costo_total', $tour['costo_total'] ?? 0);
+        $stmt->bindValue(':utilidad', $tour['comision_tour'] ?? 0); // Utilidad = Comisión
+        
+        $stmt->bindValue(':notas', $tour['notas'] ?? '');
         
         $stmt->execute();
     }
