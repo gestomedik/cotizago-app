@@ -296,7 +296,14 @@ export default function NewQuotationPage() {
       const agente_id = userStr ? JSON.parse(userStr).id : 1;
 
       // Preparar Payloads para la BD
-      const hotelesPayload = hoteles.map(h => ({ ...h, num_personas: totalPasajeros }));
+      // Payloads de servicios
+      const hotelesPayload = hoteles.map(h => ({
+        ...h,
+        nombre_hotel: h.nombre, // ✅ ¡ESTA LÍNEA ARREGLA EL ERROR!
+        num_personas: totalPasajeros,
+        // Aseguramos que este también vaya correcto por si acaso
+        plan_alimentacion: h.plan_alimentacion || 'sin_alimentos',
+      }));
       const toursPayload = tours.map(t => ({ ...t, num_personas: t.cantidad_adultos + t.cantidad_ninos }));
       const transportesPayload = transportes.map(tr => ({
         ...tr, // Enviamos todo el objeto, el backend tomará lo que necesita
