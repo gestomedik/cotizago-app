@@ -227,7 +227,7 @@ export function TransportesLista({ items, onEliminar }: { items: TransporteItem[
                     <div>
                         <p className="text-xs text-slate-500 mb-1">Precio Venta</p>
                         <p className="font-bold text-lg text-[#00D4D4]">
-                            ${t.precio_venta_total.toLocaleString('es-MX', {minimumFractionDigits: 2})}
+                            ${(t.precio_venta_total || 0).toLocaleString('es-MX', {minimumFractionDigits: 2})}
                         </p>
                     </div>
                     <Button variant="ghost" size="sm" onClick={() => onEliminar(t.id)} className="text-red-500 opacity-0 group-hover:opacity-100 transition-opacity h-8 px-2 self-end">
