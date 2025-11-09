@@ -720,70 +720,244 @@ export default function NewQuotationPage() {
         )
       }
 
-      // --- PASO 8: RESUMEN FINAL ---
+      // ====================================================
+      // ✅ CASE 8: RESUMEN FINAL DETALLADO (NUEVO)
+      // ====================================================
       case 8: {
-        const costoNetoTotal = calcularCostoNetoTotal();
+        // 1. Cálculos de Pasajeros
+        // (Necesitamos saber cuántos de cada tipo para mostrar en el resumen)
+        const paxObjs = pasajeros.filter(p => selectedPasajeros.includes(p.id));
+        const numAdultos = 1 + paxObjs.filter(p => p.tipo_pasajero === 'adulto').length;
+        const numNinos = paxObjs.filter(p => p.tipo_pasajero === 'nino' || p.tipo_pasajero === 'infante').length;
+
+        // 2. Cálculos Financieros Globales
         const precioFinal = calcularPrecioFinal();
-        const utilidadReal = precioFinal - costoNetoTotal;
         
-        // Calcular comisión total (suma de todas las comisiones individuales)
-        const comisionVuelos = vuelos.reduce((sum, v) => sum + ((v.comision_vuelo || 0) * v.cantidad_pasajeros), 0);
-        const comisionHoteles = hoteles.reduce((sum, h) => sum + (h.comision_hotel || 0), 0);
-        const comisionTours = tours.reduce((sum, t) => sum + (t.comision_tour || 0), 0);
-        const comisionTransportes = transportes.reduce((sum, t) => sum + (t.comision_transporte || 0), 0);
-        const totalComisiones = comisionVuelos + comisionHoteles + comisionTours + comisionTransportes + (seguro.comision || 0) + comisionMonto;
+        const totalComisionVuelos = vuelos.reduce((sum, v) => sum + ((v.comision_vuelo || 0) * v.cantidad_pasajeros), 0);
+        const totalComisionHoteles = hoteles.reduce((sum, h) => sum + (h.comision_hotel || 0), 0);
+        const totalComisionTours = tours.reduce((sum, t) => sum + (t.comision_tour || 0), 0);
+        const totalComisionTransportes = transportes.reduce((sum, t) => sum + (t.comision_transporte || 0), 0);
+        const totalComisionSeguro = seguro.comision || 0;
+        
+        const totalComisiones = totalComisionVuelos + totalComisionHoteles + totalComisionTours + totalComisionTransportes + totalComisionSeguro + comisionMonto;
+        
+        // 3. Cálculo de Porcentaje de Utilidad
+        // (Evitamos división por cero)
+        const porcentajeUtilidad = precioFinal > 0 ? (totalComisiones / precioFinal) * 100 : 0;
 
         return (
-          <div className="space-y-6">
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <div className="space-y-8 bg-slate-50 p-6 rounded-xl">
+            {/* --- ENCABEZADO DEL RESUMEN --- */}
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+              <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2 border-b pb-4">
                 <FileCheck className="w-6 h-6 text-[#00D4D4]"/> Resumen de la Cotización
               </h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                   <h4 className="font-medium text-gray-500 text-sm uppercase mb-2">Cliente</h4>
-                   <p className="text-lg font-semibold text-gray-900">{selectedClient?.nombre} {selectedClient?.apellido}</p>
-                   <p className="text-gray-600">{selectedClient?.email}</p>
+                   <h4 className="font-bold text-xs text-slate-400 uppercase mb-2 flex items-center gap-1"><User className="w-3.5 h-3.5"/> Cliente</h4>
+                   <p className="text-lg font-bold text-slate-900">{selectedClient?.nombre} {selectedClient?.apellido}</p>
+                   <p className="text-sm text-slate-500">{selectedClient?.email}</p>
                 </div>
                 <div>
-                   <h4 className="font-medium text-gray-500 text-sm uppercase mb-2">Viaje</h4>
-                   <p className="font-medium">{destinoData.origen} <ChevronRight className="inline w-4 h-4"/> {destinoData.destino}</p>
-                   <p className="text-gray-600 text-sm flex items-center gap-1">
-                     <div className="w-2 h-2 rounded-full bg-green-500"></div> {new Date(destinoData.fecha_salida).toLocaleDateString('es-MX', {day: 'numeric', month: 'short', year: 'numeric'})}
-                     <div className="w-2 h-2 rounded-full bg-red-500 ml-2"></div> {new Date(destinoData.fecha_regreso).toLocaleDateString('es-MX', {day: 'numeric', month: 'short', year: 'numeric'})}
+                   <h4 className="font-bold text-xs text-slate-400 uppercase mb-2 flex items-center gap-1"><Users className="w-3.5 h-3.5"/> Pasajeros ({1 + selectedPasajeros.length})</h4>
+                   <div className="flex gap-3">
+                      <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                        {numAdultos} Adultos
+                      </span>
+                      {numNinos > 0 && (
+                        <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-medium">
+                          {numNinos} Menores
+                        </span>
+                      )}
+                   </div>
+                </div>
+                <div>
+                   <h4 className="font-bold text-xs text-slate-400 uppercase mb-2 flex items-center gap-1"><MapPin className="w-3.5 h-3.5"/> Viaje</h4>
+                   <p className="font-bold text-slate-900">{destinoData.origen} → {destinoData.destino}</p>
+                   <p className="text-sm text-slate-500">
+                     {new Date(destinoData.fecha_salida).toLocaleDateString('es-MX', {day: 'numeric', month: 'short'})} - {new Date(destinoData.fecha_regreso).toLocaleDateString('es-MX', {day: 'numeric', month: 'short', year: 'numeric'})}
                    </p>
                 </div>
               </div>
+            </div>
 
-              <div className="border-t border-gray-100 pt-6">
-                <h4 className="font-medium text-gray-900 mb-4">Desglose Financiero</h4>
-                <div className="space-y-3 text-sm">
-                    {/* ... (Líneas de desglose de costos netos si las quieres mostrar) ... */}
-                    <div className="flex justify-between items-center py-2 border-b border-gray-50">
-                        <span className="text-gray-600">Costo Neto Total (Proveedores):</span>
-                        <span className="font-medium">${costoNetoTotal.toLocaleString('es-MX', {minimumFractionDigits: 2})}</span>
-                    </div>
-                    
-                    <div className="flex justify-between items-center py-3 bg-[#00D4D4]/5 px-4 rounded-lg -mx-4">
-                        <span className="text-lg font-bold text-gray-900">Precio Final al Cliente:</span>
-                        <span className="text-2xl font-bold text-[#00D4D4]">${precioFinal.toLocaleString('es-MX', {minimumFractionDigits: 2})}</span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4 mt-4">
-                        <div className="bg-green-50 p-4 rounded-lg border border-green-100">
-                            <p className="text-xs text-green-700 uppercase font-bold mb-1">Tu Utilidad Real</p>
-                            <p className="text-2xl font-bold text-green-600">+${utilidadReal.toLocaleString('es-MX', {minimumFractionDigits: 2})}</p>
+            {/* --- DETALLE DE SERVICIOS (CON PRECIOS Y COMISIONES) --- */}
+            <div className="space-y-6">
+              
+              {/* Vuelos */}
+              {vuelos.length > 0 && (
+                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                  <h5 className="font-bold text-slate-700 mb-4 flex items-center justify-between">
+                    <span className="flex items-center gap-2"><Plane className="w-5 h-5 text-[#00D4D4]"/> Vuelos</span>
+                    <span className="text-sm bg-blue-50 text-blue-700 px-3 py-1 rounded-full">Comisión Total: ${totalComisionVuelos.toLocaleString()}</span>
+                  </h5>
+                  <div className="space-y-4">
+                    {vuelos.map((v, i) => (
+                      <div key={i} className="text-sm border-l-4 border-[#00D4D4] pl-4 py-2 bg-slate-50 rounded-r-lg">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <span className="font-bold text-base text-slate-900">{v.aerolinea}</span>
+                            <span className="text-slate-500 ml-2">({v.tipo_vuelo} • {v.cantidad_pasajeros} pax)</span>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold text-slate-900">${v.total_con_comision?.toLocaleString()}</p>
+                            <p className="text-xs text-green-600 font-medium">+${(v.comision_vuelo * v.cantidad_pasajeros).toLocaleString()} com.</p>
+                          </div>
                         </div>
-                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-                            <p className="text-xs text-blue-700 uppercase font-bold mb-1 flex items-center gap-1"><DollarSign className="w-3 h-3"/> Comisiones Totales</p>
-                            <p className="text-xl font-bold text-blue-900">${totalComisiones.toLocaleString('es-MX', {minimumFractionDigits: 2})}</p>
+                        <div className="grid grid-cols-2 gap-4 text-slate-600">
+                          <p>🛫 <strong>IDA:</strong> {new Date(v.fecha_salida).toLocaleDateString('es-MX', {day: '2-digit', month: 'short'})} • {v.hora_salida} → {v.hora_llegada}</p>
+                          {v.tipo_vuelo === 'redondo' && v.fecha_regreso && (
+                            <p>🛬 <strong>REGRESO:</strong> {new Date(v.fecha_regreso).toLocaleDateString('es-MX', {day: '2-digit', month: 'short'})} • {v.hora_regreso} → {v.hora_regreso_llegada}</p>
+                          )}
                         </div>
-                    </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* Hoteles */}
+              {hoteles.length > 0 && (
+                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                  <h5 className="font-bold text-slate-700 mb-4 flex items-center justify-between">
+                    <span className="flex items-center gap-2"><Hotel className="w-5 h-5 text-[#00D4D4]"/> Hospedaje</span>
+                    <span className="text-sm bg-blue-50 text-blue-700 px-3 py-1 rounded-full">Comisión Total: ${totalComisionHoteles.toLocaleString()}</span>
+                  </h5>
+                  <div className="space-y-3">
+                    {hoteles.map((h, i) => (
+                      <div key={i} className="flex justify-between items-center text-sm border-b border-slate-100 pb-3 last:border-0 last:pb-0">
+                        <div>
+                          <p className="font-bold text-base text-slate-900">{h.nombre}</p>
+                          <p className="text-slate-600">
+                            {h.num_habitaciones} hab. <strong>{h.tipo_habitacion}</strong> ({h.plan_alimentacion.replace('_', ' ')})
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            {new Date(h.fecha_checkin).toLocaleDateString('es-MX', {day: 'numeric', month: 'short'})} - {new Date(h.fecha_checkout).toLocaleDateString('es-MX', {day: 'numeric', month: 'short'})} ({h.num_noches} noches)
+                          </p>
+                        </div>
+                        <div className="text-right min-w-[120px]">
+                            <p className="font-bold text-slate-900">${h.precio_venta_total.toLocaleString()}</p>
+                            <p className="text-xs text-green-600 font-medium">+${h.comision_hotel.toLocaleString()} com.</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Tours */}
+              {tours.length > 0 && (
+                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                  <h5 className="font-bold text-slate-700 mb-4 flex items-center justify-between">
+                    <span className="flex items-center gap-2"><Ticket className="w-5 h-5 text-[#00D4D4]"/> Tours</span>
+                    <span className="text-sm bg-blue-50 text-blue-700 px-3 py-1 rounded-full">Comisión Total: ${totalComisionTours.toLocaleString()}</span>
+                  </h5>
+                  <div className="space-y-3">
+                    {tours.map((t, i) => (
+                      <div key={i} className="flex justify-between items-center text-sm border-b border-slate-100 pb-3 last:border-0 last:pb-0">
+                        <div>
+                          <p className="font-bold text-base text-slate-900">{t.nombre_tour}</p>
+                          <p className="text-slate-600 flex items-center gap-2">
+                             📅 {new Date(t.fecha_tour).toLocaleDateString('es-MX', {day: 'numeric', month: 'long', year: 'numeric'})}
+                             {t.hora_inicio && <span>• ⏰ {t.hora_inicio}</span>}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            ({t.cantidad_adultos} Adultos, {t.cantidad_ninos} Niños)
+                          </p>
+                        </div>
+                        <div className="text-right min-w-[120px]">
+                            <p className="font-bold text-slate-900">${t.precio_venta_total.toLocaleString()}</p>
+                            <p className="text-xs text-green-600 font-medium">+${t.comision_tour.toLocaleString()} com.</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Otros Servicios (Resumen rápido si existen) */}
+              {(transportes.length > 0 || seguro.precio_venta_total > 0 || costosData.otros_costos > 0) && (
+                 <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <h5 className="font-bold text-slate-700 mb-4 flex items-center gap-2"><Package className="w-5 h-5 text-[#00D4D4]"/> Otros Servicios</h5>
+                    <div className="space-y-2 text-sm">
+                        {transportes.map((tr, i) => (
+                            <div key={i} className="flex justify-between">
+                                <span><Bus className="w-3 h-3 inline mr-1"/> {tr.tipo_transporte} - {tr.descripcion}</span>
+                                <span>
+                                    <strong>${tr.precio_venta_total.toLocaleString()}</strong> 
+                                    <span className="text-green-600 text-xs ml-2">(+${tr.comision_transporte.toLocaleString()})</span>
+                                </span>
+                            </div>
+                        ))}
+                        {seguro.precio_venta_total > 0 && (
+                            <div className="flex justify-between">
+                                <span><ShieldCheck className="w-3 h-3 inline mr-1"/> Seguro: {seguro.aseguradora}</span>
+                                <span>
+                                    <strong>${seguro.precio_venta_total.toLocaleString()}</strong>
+                                    <span className="text-green-600 text-xs ml-2">(+${seguro.comision.toLocaleString()})</span>
+                                </span>
+                            </div>
+                        )}
+                         {costosData.otros_costos > 0 && (
+                            <div className="flex justify-between text-slate-500 pt-2 border-t">
+                                <span>Otros Costos/Ajustes:</span>
+                                <strong>${costosData.otros_costos.toLocaleString()}</strong>
+                            </div>
+                        )}
+                         {comisionMonto > 0 && (
+                            <div className="flex justify-between text-green-700">
+                                <span>Ajuste Comisión Extra:</span>
+                                <strong>+${comisionMonto.toLocaleString()}</strong>
+                            </div>
+                        )}
+                    </div>
+                 </div>
+              )}
 
             </div>
+
+            {/* --- TOTALES FINANCIEROS (EL NUEVO DISEÑO) --- */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+                {/* PRECIO FINAL */}
+                <div className="bg-slate-800 p-6 rounded-xl text-white shadow-lg flex flex-col justify-between">
+                    <div>
+                        <p className="text-slate-400 text-sm font-medium mb-1 uppercase tracking-wider">Precio Final al Cliente</p>
+                        <p className="text-4xl font-bold text-[#00D4D4]">
+                            ${precioFinal.toLocaleString('es-MX', {minimumFractionDigits: 2})}
+                        </p>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-4">Total a cobrar incluyendo todos los servicios e impuestos.</p>
+                </div>
+
+                {/* COMISIONES TOTALES */}
+                <div className="bg-blue-50 p-6 rounded-xl border border-blue-100 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <p className="text-blue-700 text-sm font-bold mb-1 uppercase tracking-wider flex items-center gap-1">
+                           <DollarSign className="w-4 h-4"/> Comisiones Totales
+                        </p>
+                        <p className="text-3xl font-bold text-blue-900">
+                            ${totalComisiones.toLocaleString('es-MX', {minimumFractionDigits: 2})}
+                        </p>
+                    </div>
+                    <p className="text-xs text-blue-600/70 mt-4">Suma de todas tus ganancias en esta cotización.</p>
+                </div>
+
+                {/* PORCENTAJE DE UTILIDAD (NUEVO) */}
+                <div className={`p-6 rounded-xl border shadow-sm flex flex-col justify-between ${porcentajeUtilidad >= 10 ? 'bg-green-50 border-green-100' : 'bg-yellow-50 border-yellow-100'}`}>
+                    <div>
+                        <p className={`text-sm font-bold mb-1 uppercase tracking-wider ${porcentajeUtilidad >= 10 ? 'text-green-700' : 'text-yellow-700'}`}>
+                           % de Utilidad
+                        </p>
+                        <p className={`text-3xl font-bold ${porcentajeUtilidad >= 10 ? 'text-green-600' : 'text-yellow-600'}`}>
+                            {porcentajeUtilidad.toFixed(1)}%
+                        </p>
+                    </div>
+                    <p className={`text-xs mt-4 ${porcentajeUtilidad >= 10 ? 'text-green-600/70' : 'text-yellow-600/70'}`}>
+                        Margen de ganancia sobre el precio final.
+                    </p>
+                </div>
+            </div>
+
           </div>
         )
       }
