@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { UsuariosTab } from "@/components/configuracion/UsuariosTab"
 import {
   Users,
   Building2,
@@ -28,90 +29,14 @@ import {
   Upload,
   ChevronRight,
 } from "lucide-react"
-import UserModal from "@/components/user-modal"
+
 
 type Section = "users" | "company" | "general" | "commissions" | "email" | "security" | "notifications"
 
-const sampleUsers = [
-  {
-    id: 1,
-    name: "Admin Sistema",
-    email: "admin@cotizago.com",
-    role: "Administrador",
-    status: true,
-    lastLogin: "Hoy 10:30 AM",
-    avatar: "AS",
-  },
-  {
-    id: 2,
-    name: "María González",
-    email: "maria@cotizago.com",
-    role: "Agente",
-    status: true,
-    lastLogin: "Hoy 9:15 AM",
-    avatar: "MG",
-  },
-  {
-    id: 3,
-    name: "Juan Pérez",
-    email: "juan@cotizago.com",
-    role: "Agente",
-    status: true,
-    lastLogin: "Ayer 6:45 PM",
-    avatar: "JP",
-  },
-  {
-    id: 4,
-    name: "Ana Martínez",
-    email: "ana@cotizago.com",
-    role: "Agente",
-    status: true,
-    lastLogin: "Hoy 8:20 AM",
-    avatar: "AM",
-  },
-  {
-    id: 5,
-    name: "Carlos Rodríguez",
-    email: "carlos@cotizago.com",
-    role: "Agente",
-    status: false,
-    lastLogin: "3 días atrás",
-    avatar: "CR",
-  },
-  {
-    id: 6,
-    name: "Laura Sánchez",
-    email: "laura@cotizago.com",
-    role: "Administrador",
-    status: true,
-    lastLogin: "Hoy 11:00 AM",
-    avatar: "LS",
-  },
-  {
-    id: 7,
-    name: "Pedro López",
-    email: "pedro@cotizago.com",
-    role: "Agente",
-    status: true,
-    lastLogin: "Ayer 4:30 PM",
-    avatar: "PL",
-  },
-  {
-    id: 8,
-    name: "Sofia García",
-    email: "sofia@cotizago.com",
-    role: "Visor",
-    status: true,
-    lastLogin: "Hoy 7:50 AM",
-    avatar: "SG",
-  },
-]
+
 
 export default function ConfiguracionPage() {
   const [activeSection, setActiveSection] = useState<Section>("users")
-  const [searchUser, setSearchUser] = useState("")
-  const [isUserModalOpen, setIsUserModalOpen] = useState(false)
-  const [editingUser, setEditingUser] = useState<any>(null)
 
   const sections = [
     { id: "users" as Section, icon: Users, label: "Usuarios del Sistema" },
@@ -134,16 +59,6 @@ export default function ConfiguracionPage() {
       default:
         return "bg-gray-100 text-gray-700"
     }
-  }
-
-  const handleEditUser = (user: any) => {
-    setEditingUser(user)
-    setIsUserModalOpen(true)
-  }
-
-  const handleNewUser = () => {
-    setEditingUser(null)
-    setIsUserModalOpen(true)
   }
 
   return (
@@ -173,11 +88,10 @@ export default function ConfiguracionPage() {
                       <button
                         key={section.id}
                         onClick={() => setActiveSection(section.id)}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors ${
-                          isActive
-                            ? "bg-[#00D4D4]/10 text-[#00D4D4] border-l-4 border-[#00D4D4]"
-                            : "text-gray-700 hover:bg-gray-50"
-                        }`}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors ${isActive
+                          ? "bg-[#00D4D4]/10 text-[#00D4D4] border-l-4 border-[#00D4D4]"
+                          : "text-gray-700 hover:bg-gray-50"
+                          }`}
                       >
                         <Icon className={`w-5 h-5 ${isActive ? "text-[#00D4D4]" : "text-gray-500"}`} />
                         <span className={isActive ? "font-semibold" : "font-medium"}>{section.label}</span>
@@ -197,9 +111,8 @@ export default function ConfiguracionPage() {
                       <button
                         key={section.id}
                         onClick={() => setActiveSection(section.id)}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap ${
-                          isActive ? "bg-[#00D4D4] text-white" : "bg-white text-gray-700 hover:bg-gray-50"
-                        }`}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap ${isActive ? "bg-[#00D4D4] text-white" : "bg-white text-gray-700 hover:bg-gray-50"
+                          }`}
                       >
                         <Icon className="w-4 h-4" />
                         <span className="text-sm font-medium">{section.label}</span>
@@ -213,153 +126,7 @@ export default function ConfiguracionPage() {
               <div className="flex-1">
                 {/* SECTION 1: USUARIOS DEL SISTEMA */}
                 {activeSection === "users" && (
-                  <div className="space-y-6">
-                    {/* Top Bar */}
-                    <div className="flex flex-col sm:flex-row gap-4 justify-between">
-                      <div className="relative flex-1 max-w-md">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                        <Input
-                          placeholder="Buscar usuario..."
-                          value={searchUser}
-                          onChange={(e) => setSearchUser(e.target.value)}
-                          className="pl-10"
-                        />
-                      </div>
-                      <Button onClick={handleNewUser} className="bg-[#00D4D4] hover:bg-[#00D4D4]/90">
-                        <Plus className="w-4 h-4 mr-2" />
-                        Nuevo Usuario
-                      </Button>
-                    </div>
-
-                    {/* Statistics Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <div className="bg-white rounded-lg shadow-sm p-6">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-[#00D4D4]/10 rounded-lg flex items-center justify-center">
-                            <Users className="w-6 h-6 text-[#00D4D4]" />
-                          </div>
-                          <div>
-                            <p className="text-3xl font-bold text-gray-900">8</p>
-                            <p className="text-sm text-gray-600">usuarios registrados</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-white rounded-lg shadow-sm p-6">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-red-50 rounded-lg flex items-center justify-center">
-                            <Shield className="w-6 h-6 text-red-600" />
-                          </div>
-                          <div>
-                            <p className="text-3xl font-bold text-gray-900">2</p>
-                            <p className="text-sm text-gray-600">acceso completo</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-white rounded-lg shadow-sm p-6">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
-                            <User className="w-6 h-6 text-blue-600" />
-                          </div>
-                          <div>
-                            <p className="text-3xl font-bold text-gray-900">6</p>
-                            <p className="text-sm text-gray-600">agentes de venta</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Users Table */}
-                    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                      <div className="overflow-x-auto">
-                        <table className="w-full">
-                          <thead className="bg-gray-50 border-b border-gray-200">
-                            <tr>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Usuario
-                              </th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Email
-                              </th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Rol
-                              </th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Estado
-                              </th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Última sesión
-                              </th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Acciones
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody className="bg-white divide-y divide-gray-200">
-                            {sampleUsers
-                              .filter(
-                                (user) =>
-                                  user.name.toLowerCase().includes(searchUser.toLowerCase()) ||
-                                  user.email.toLowerCase().includes(searchUser.toLowerCase()),
-                              )
-                              .map((user) => (
-                                <tr key={user.id} className="hover:bg-gray-50 transition-colors">
-                                  <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="flex items-center gap-3">
-                                      <div className="w-10 h-10 bg-[#00D4D4]/10 rounded-full flex items-center justify-center">
-                                        <span className="text-sm font-semibold text-[#00D4D4]">{user.avatar}</span>
-                                      </div>
-                                      <span className="font-medium text-gray-900">{user.name}</span>
-                                    </div>
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{user.email}</td>
-                                  <td className="px-6 py-4 whitespace-nowrap">
-                                    <span
-                                      className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${getRoleBadgeColor(user.role)}`}
-                                    >
-                                      {user.role === "Administrador" && <Shield className="w-3 h-3" />}
-                                      {user.role === "Agente" && <User className="w-3 h-3" />}
-                                      {user.role === "Visor" && <Eye className="w-3 h-3" />}
-                                      {user.role}
-                                    </span>
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap">
-                                    <button
-                                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                                        user.status ? "bg-[#00D4D4]" : "bg-gray-300"
-                                      }`}
-                                    >
-                                      <span
-                                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                          user.status ? "translate-x-6" : "translate-x-1"
-                                        }`}
-                                      />
-                                    </button>
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                                    {user.lastLogin}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="flex items-center gap-2">
-                                      <button
-                                        onClick={() => handleEditUser(user)}
-                                        className="p-2 text-gray-600 hover:text-[#00D4D4] hover:bg-[#00D4D4]/10 rounded-lg transition-colors"
-                                      >
-                                        <Edit2 className="w-4 h-4" />
-                                      </button>
-                                      <button className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                                        <Trash2 className="w-4 h-4" />
-                                      </button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </div>
+                  <UsuariosTab />
                 )}
 
                 {/* SECTION 2: INFORMACIÓN DE EMPRESA */}
@@ -909,15 +676,7 @@ export default function ConfiguracionPage() {
         </main>
       </div>
 
-      {/* User Modal */}
-      <UserModal
-        isOpen={isUserModalOpen}
-        onClose={() => {
-          setIsUserModalOpen(false)
-          setEditingUser(null)
-        }}
-        user={editingUser}
-      />
+
     </div>
   )
 }

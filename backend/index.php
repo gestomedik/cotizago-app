@@ -1,9 +1,21 @@
 <?php
 // ============================================
-// CONFIGURACIÓN CORS - DEBE IR AL INICIO
+// CONFIGURACIÓN INICIAL
+// ============================================
+
+// CRÍTICO: Suprimir salida de errores HTML (usar logs en producción)
+ini_set('display_errors', '0');
+error_reporting(E_ALL);
+
+// ============================================
+// CONFIGURACIÓN CORS
 // ============================================
 
 header('Content-Type: application/json; charset=UTF-8');
+header('Access-Control-Allow-Origin: http://localhost:3000');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, Accept');
+header('Access-Control-Allow-Credentials: true');
 
 // Manejar preflight OPTIONS
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
