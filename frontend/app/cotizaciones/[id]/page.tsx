@@ -183,107 +183,93 @@ export default function CotizacionDetailPage() {
                     {
                         cotizacion.hoteles && cotizacion.hoteles.length > 0 && (
                             <p className="text-gray-700">
-                                ★ Habitación en Hotel {cotizacion.hoteles[0].nombre_hotel} + {cotizacion.hoteles[0].plan_alimentacion || 'Sin alimentos'}
+                                ★ Habitación en Hotel {cotizacion.hoteles[0].nombre_hotel}
                             </p>
                         )
                     }
                 </div>
 
-                {/* Featured Image - Placeholder */}
-                <div className="mb-6 h-48 bg-gradient-to-r from-blue-400 to-cyan-500 rounded-lg flex items-center justify-center">
-                    <p className="text-white text-2xl font-bold">{cotizacion.destino}</p>
+                {/* Featured Section - Hotel Image and Trip Details */}
+                <div className="mb-6 grid grid-cols-3 gap-6">
+                    {/* Hotel Image */}
+                    <div className="relative h-48 rounded-lg overflow-hidden bg-gray-200">
+                        {cotizacion.hoteles && cotizacion.hoteles.length > 0 && cotizacion.hoteles[0].imagen_url ? (
+                            <Image
+                                src={cotizacion.hoteles[0].imagen_url}
+                                alt={cotizacion.hoteles[0].nombre_hotel}
+                                fill
+                                className="object-cover"
+                            />
+                        ) : (
+                            <div className="w-full h-full bg-gradient-to-r from-blue-400 to-cyan-500 flex items-center justify-center">
+                                <p className="text-white text-2xl font-bold">{cotizacion.destino}</p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Trip Details */}
+                    <div className="col-span-2 h-48 flex flex-col justify-center space-y-4 bg-gray-50 p-6 rounded-lg">
+                        <div>
+                            <p className="text-sm text-gray-600 mb-1">Llegada</p>
+                            <p className="text-lg font-semibold text-gray-900">
+                                {new Date(cotizacion.fecha_salida).toLocaleDateString('es-MX', {
+                                    weekday: 'long',
+                                    day: 'numeric',
+                                    month: 'long',
+                                    year: 'numeric'
+                                })}
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-600 mb-1">Salida</p>
+                            <p className="text-lg font-semibold text-gray-900">
+                                {new Date(cotizacion.fecha_regreso).toLocaleDateString('es-MX', {
+                                    weekday: 'long',
+                                    day: 'numeric',
+                                    month: 'long',
+                                    year: 'numeric'
+                                })}
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-600 mb-1">Duración</p>
+                            <p className="text-lg font-semibold text-gray-900">{cotizacion.num_noches} noches</p>
+                        </div>
+                    </div>
                 </div>
 
-                {/* Trip Details */}
-                <div className="grid grid-cols-2 gap-4 mb-6 bg-gray-50 p-4 rounded-lg">
+                {/* Room and Passenger Information */}
+                <div className="mb-6 grid grid-cols-3 gap-4 bg-gray-50 p-4 rounded-lg">
+                    {/* Number of Rooms */}
                     <div>
-                        <p className="text-sm text-gray-600">Llegada</p>
+                        <p className="text-sm text-gray-600 mb-1">Habitaciones</p>
                         <p className="font-semibold text-gray-900">
-                            {new Date(cotizacion.fecha_salida).toLocaleDateString('es-MX', {
-                                weekday: 'long',
-                                day: 'numeric',
-                                month: 'long',
-                                year: 'numeric'
-                            })}
+                            {cotizacion.hoteles && cotizacion.hoteles.length > 0 ? cotizacion.hoteles.length : 1}
+                            {' '}{(cotizacion.hoteles && cotizacion.hoteles.length > 1) ? 'Habitaciones' : 'Habitación'}
                         </p>
                     </div>
+
+                    {/* Number of Passengers */}
                     <div>
-                        <p className="text-sm text-gray-600">Salida</p>
-                        <p className="font-semibold text-gray-900">
-                            {new Date(cotizacion.fecha_regreso).toLocaleDateString('es-MX', {
-                                weekday: 'long',
-                                day: 'numeric',
-                                month: 'long',
-                                year: 'numeric'
-                            })}
-                        </p>
-                    </div>
-                    <div>
-                        <p className="text-sm text-gray-600">Duración</p>
-                        <p className="font-semibold text-gray-900">{cotizacion.num_noches} noches</p>
-                    </div>
-                    <div>
-                        <p className="text-sm text-gray-600">Pasajeros</p>
+                        <p className="text-sm text-gray-600 mb-1">Pasajeros</p>
                         <p className="font-semibold text-gray-900">
                             {cotizacion.num_adultos} {cotizacion.num_adultos === 1 ? 'Adulto' : 'Adultos'}
                             {cotizacion.num_ninos > 0 && `, ${cotizacion.num_ninos} ${cotizacion.num_ninos === 1 ? 'Niño' : 'Niños'}`}
                             {cotizacion.num_infantes > 0 && `, ${cotizacion.num_infantes} ${cotizacion.num_infantes === 1 ? 'Infante' : 'Infantes'}`}
                         </p>
                     </div>
+
+                    {/* Room Type */}
+                    <div>
+                        <p className="text-sm text-gray-600 mb-1">Tipo de Habitación</p>
+                        <p className="font-semibold text-gray-900">
+                            {cotizacion.hoteles && cotizacion.hoteles.length > 0
+                                ? `${cotizacion.hoteles[0].tipo_habitacion || 'No especificado'} + ${cotizacion.hoteles[0].plan_alimentacion || 'Sin alimentos'}`
+                                : 'No especificado'}
+                        </p>
+                    </div>
                 </div>
 
-                {/* Itinerary Table */}
-                {
-                    cotizacion.descripcion_general && (
-                        <div className="mb-6">
-                            <h3 className="text-lg font-bold text-gray-900 mb-3">Descripción General</h3>
-                            <p className="text-gray-700 whitespace-pre-wrap">{cotizacion.descripcion_general}</p>
-                        </div>
-                    )
-                }
-
-                {/* Hotel Details */}
-                {
-                    cotizacion.hoteles && cotizacion.hoteles.length > 0 && (
-                        <div className="mb-6">
-                            <h3 className="text-lg font-bold text-gray-900 mb-3">Hospedaje</h3>
-                            {cotizacion.hoteles.map((hotel: any, index: number) => (
-                                <div key={index} className="mb-4 p-4 bg-gray-50 rounded-lg">
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div>
-                                            <p className="text-sm text-gray-600">Hotel</p>
-                                            <p className="font-semibold text-gray-900">{hotel.nombre_hotel}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-gray-600">Tipo de Habitación</p>
-                                            <p className="font-semibold text-gray-900">{hotel.tipo_habitacion}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-gray-600">Check-in</p>
-                                            <p className="font-semibold text-gray-900">
-                                                {new Date(hotel.fecha_checkin).toLocaleDateString('es-MX')}
-                                            </p>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-gray-600">Check-out</p>
-                                            <p className="font-semibold text-gray-900">
-                                                {new Date(hotel.fecha_checkout).toLocaleDateString('es-MX')}
-                                            </p>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-gray-600">Plan</p>
-                                            <p className="font-semibold text-gray-900">{hotel.plan_alimentacion}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-gray-600">Noches</p>
-                                            <p className="font-semibold text-gray-900">{hotel.num_noches}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )
-                }
 
                 {/* Flight Details */}
                 {
@@ -399,6 +385,6 @@ export default function CotizacionDetailPage() {
                     </p>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }
