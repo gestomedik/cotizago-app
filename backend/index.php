@@ -4,7 +4,7 @@
 // ============================================
 
 // CRÍTICO: Suprimir salida de errores HTML (usar logs en producción)
-ini_set('display_errors', '0');
+ini_set('display_errors', '1');
 error_reporting(E_ALL);
 
 // ============================================
@@ -195,6 +195,19 @@ try {
                 echo json_encode([
                     'success' => false,
                     'error' => 'Ruta de reportes no encontrada'
+                ]);
+            }
+            break;
+
+        case 'permisos':
+            $routeFile = __DIR__ . '/routes/permisos.php';
+            if (file_exists($routeFile)) {
+                require_once $routeFile;
+            } else {
+                http_response_code(500);
+                echo json_encode([
+                    'success' => false,
+                    'error' => 'Ruta de permisos no encontrada'
                 ]);
             }
             break;

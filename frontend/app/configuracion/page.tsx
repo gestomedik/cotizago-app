@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
 import { DashboardSidebar } from "@/components/dashboard-sidebar"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { Button } from "@/components/ui/button"
@@ -8,6 +9,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { UsuariosTab } from "@/components/configuracion/UsuariosTab"
+import { PermisosTab } from "@/components/configuracion/PermisosTab"
+import { usePermissions } from "@/hooks/usePermissions"
 import {
   Users,
   Building2,
@@ -28,15 +31,31 @@ import {
   Linkedin,
   Upload,
   ChevronRight,
+  ShieldCheck,
 } from "lucide-react"
 
 
-type Section = "users" | "company" | "general" | "commissions" | "email" | "security" | "notifications"
+type Section = "users" | "company" | "general" | "commissions" | "email" | "security" | "notifications" | "roles"
 
 
 
 export default function ConfiguracionPage() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
   const [activeSection, setActiveSection] = useState<Section>("users")
+  const { esAdmin } = usePermissions()
+
+  useEffect(() => {
+    const section = searchParams.get("section") as Section
+    if (section && ["users", "company", "general", "commissions", "email", "security", "notifications", "roles"].includes(section)) {
+      setActiveSection(section)
+    }
+  }, [searchParams])
+
+  const handleSectionChange = (sectionId: Section) => {
+    setActiveSection(sectionId)
+    router.push(`/configuracion?section=${sectionId}`)
+  }
 
   const sections = [
     { id: "users" as Section, icon: Users, label: "Usuarios del Sistema" },
@@ -45,6 +64,7 @@ export default function ConfiguracionPage() {
     { id: "commissions" as Section, icon: Percent, label: "Comisiones y Precios" },
     { id: "email" as Section, icon: Mail, label: "Plantillas de Email" },
     { id: "security" as Section, icon: Shield, label: "Seguridad" },
+    { id: "roles" as Section, icon: ShieldCheck, label: "Roles y Permisos" },
     { id: "notifications" as Section, icon: Bell, label: "Notificaciones" },
   ]
 
@@ -77,6 +97,8 @@ export default function ConfiguracionPage() {
               <span className="text-gray-900 font-medium">Configuración</span>
             </div>
 
+
+
             <div className="flex gap-6">
               {/* Sidebar Navigation */}
               <div className="hidden lg:block w-64 flex-shrink-0">
@@ -87,7 +109,7 @@ export default function ConfiguracionPage() {
                     return (
                       <button
                         key={section.id}
-                        onClick={() => setActiveSection(section.id)}
+                        onClick={() => handleSectionChange(section.id)}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors ${isActive
                           ? "bg-[#00D4D4]/10 text-[#00D4D4] border-l-4 border-[#00D4D4]"
                           : "text-gray-700 hover:bg-gray-50"
@@ -110,7 +132,7 @@ export default function ConfiguracionPage() {
                     return (
                       <button
                         key={section.id}
-                        onClick={() => setActiveSection(section.id)}
+                        onClick={() => handleSectionChange(section.id)}
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap ${isActive ? "bg-[#00D4D4] text-white" : "bg-white text-gray-700 hover:bg-gray-50"
                           }`}
                       >
@@ -594,6 +616,24 @@ export default function ConfiguracionPage() {
                         </div>
                       </div>
                     </div>
+
+
+                  </div>
+                )}
+
+                {/* SECTION 8: ROLES Y PERMISOS */}
+                {activeSection === "roles" && (
+                  <div className="bg-white rounded-lg shadow-sm p-6 space-y-8">
+                    <h2 className="text-xl font-bold text-gray-900">Roles y Permisos</h2>
+                    <p className="text-gray-600">Gestione los roles y permisos de acceso al sistema.</p>
+
+                    {esAdmin() ? (
+                      <PermisosTab />
+                    ) : (
+                      <div className="p-4 bg-red-50 text-red-700 rounded-lg">
+                        No tiene permisos para ver esta sección.
+                      </div>
+                    )}
                   </div>
                 )}
 

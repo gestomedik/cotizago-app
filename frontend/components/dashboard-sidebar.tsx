@@ -7,7 +7,7 @@ import { usePathname, useSearchParams } from "next/navigation"
 import {
   Home, Users, UserPlus, FileText, Package, DollarSign,
   BarChart, Settings, LogOut, Menu, X, ChevronDown, ChevronRight,
-  UserCog, Building2, Shield, Bell, Mail
+  UserCog, Building2, Shield, Bell, Mail, ShieldCheck
 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -32,6 +32,7 @@ const menuItems = [
       { label: "Usuarios", href: "/configuracion?section=users", icon: UserCog },
       { label: "Empresa", href: "/configuracion?section=company", icon: Building2 },
       { label: "Seguridad", href: "/configuracion?section=security", icon: Shield },
+      { label: "Roles y Permisos", href: "/configuracion?section=roles", icon: ShieldCheck },
       { label: "Notificaciones", href: "/configuracion?section=notifications", icon: Bell },
     ]
   },
@@ -41,7 +42,7 @@ export function DashboardSidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  
+
   // Estado para controlar qué menús están expandidos
   const [expandedMenus, setExpandedMenus] = useState<string[]>([])
 
@@ -74,7 +75,7 @@ export function DashboardSidebar() {
           const isExpanded = expandedMenus.includes(item.href)
           // Está activo si la ruta coincide base
           const isActiveBase = pathname === item.href || pathname.startsWith(item.href + '/')
-          
+
           return (
             <div key={item.label}>
               {item.submenu ? (
@@ -90,7 +91,7 @@ export function DashboardSidebar() {
                     <Icon className="h-5 w-5" />
                     <span>{item.label}</span>
                   </div>
-                  {isExpanded ? <ChevronDown className="h-4 w-4"/> : <ChevronRight className="h-4 w-4"/>}
+                  {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                 </button>
               ) : (
                 // --- ÍTEM NORMAL ---
@@ -117,7 +118,7 @@ export function DashboardSidebar() {
                     // Verificamos si este submenú está activo mirando los parámetros URL
                     const currentSection = searchParams.get('section')
                     const isSubActive = sub.href.includes(`section=${currentSection}`)
-                    
+
                     return (
                       <Link
                         key={sub.label}
