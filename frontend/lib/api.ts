@@ -379,6 +379,16 @@ export const api = {
       method: 'DELETE',
     }),
   },
+
+  // ========== CONFIGURACIÓN EMPRESA ==========
+  configuracionEmpresa: {
+    get: () => fetchAPI('/config/empresa'),
+
+    update: (data: any) => fetchAPI('/config/empresa', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  },
 };
 
 // ✅ CORRECCIÓN COMPLETA

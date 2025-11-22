@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { UsuariosTab } from "@/components/configuracion/UsuariosTab"
 import { PermisosTab } from "@/components/configuracion/PermisosTab"
+import { EmpresaTab } from "@/components/configuracion/EmpresaTab"
 import { usePermissions } from "@/hooks/usePermissions"
 import {
   Users,
@@ -153,6 +154,11 @@ export default function ConfiguracionPage() {
 
                 {/* SECTION 2: INFORMACIÓN DE EMPRESA */}
                 {activeSection === "company" && (
+                  <EmpresaTab />
+                )}
+
+                {/* OLD COMPANY SECTION - REMOVED */}
+                {false && (
                   <div className="bg-white rounded-lg shadow-sm p-6 space-y-8">
                     <div>
                       <h2 className="text-xl font-bold text-gray-900 mb-6">Información de Empresa</h2>

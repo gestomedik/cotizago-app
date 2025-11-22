@@ -10,7 +10,11 @@ $action = $parts[1] ?? null;
 
 switch($method) {
     case 'GET':
-        if ($action === 'comisiones') {
+        if ($action === 'empresa') {
+            // GET /config/empresa - Obtener configuración de empresa
+            $controller = new ConfiguracionEmpresaController();
+            $controller->get();
+        } elseif ($action === 'comisiones') {
             // GET /config/comisiones - Ver rangos de comisión
             Auth::requireAuth();
             
@@ -20,6 +24,14 @@ switch($method) {
             $config = $stmt->fetchAll();
             
             Response::success($config);
+        }
+        break;
+        
+    case 'POST':
+        if ($action === 'empresa') {
+            // POST /config/empresa - Crear/actualizar configuración de empresa
+            $controller = new ConfiguracionEmpresaController();
+            $controller->createOrUpdate();
         }
         break;
         
