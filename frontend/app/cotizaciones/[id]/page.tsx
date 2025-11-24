@@ -344,10 +344,10 @@ export default function CotizacionDetailPage() {
 
                 {/* Total */}
                 <div className="flex justify-end mb-8">
-                    <div className="text-right">
-                        <p className="text-sm text-gray-600 mb-1">Total del Paquete</p>
-                        <p className="text-3xl font-bold text-[#FF4D8D]">
-                            ${cotizacion.precio_venta_final.toLocaleString('es-MX', {
+                    <div className="flex items-center gap-4">
+                        <p className="text-3xl font-bold text-gray-900">Total del Paquete</p>
+                        <p className="text-3xl font-bold text-gray-900">
+                            ${Number(cotizacion.precio_venta_final).toLocaleString('es-MX', {
                                 minimumFractionDigits: 2,
                                 maximumFractionDigits: 2
                             })}

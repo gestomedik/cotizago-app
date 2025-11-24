@@ -229,30 +229,153 @@ class CotizacionController {
                 return;
             }
             
-            // Actualizar campos básicos
-            $sql = "UPDATE cotizaciones SET
-                    origen = :origen,
-                    destino = :destino,
-                    fecha_salida = :fecha_salida,
-                    fecha_regreso = :fecha_regreso,
-                    descripcion_general = :descripcion_general,
-                    notas_internas = :notas_internas,
-                    estado = :estado,
-                    fecha_modificacion = NOW()
-                    WHERE id = :id";
+            // Iniciar transacción
+            $this->conn->beginTransaction();
             
-            $stmt = $this->conn->prepare($sql);
-            $stmt->bindParam(':origen', $data['origen']);
-            $stmt->bindParam(':destino', $data['destino']);
-            $stmt->bindParam(':fecha_salida', $data['fecha_salida']);
-            $stmt->bindParam(':fecha_regreso', $data['fecha_regreso']);
-            $stmt->bindParam(':descripcion_general', $data['descripcion_general']);
-            $stmt->bindParam(':notas_internas', $data['notas_internas']);
-            $stmt->bindParam(':estado', $data['estado']);
-            $stmt->bindParam(':id', $id);
-            $stmt->execute();
-            
-            Response::success(['id' => $id], 'Cotización actualizada exitosamente');
+            try {
+                // Calcular número de noches
+                $fecha_salida_dt = new DateTime($data['fecha_salida']);
+                $fecha_regreso_dt = new DateTime($data['fecha_regreso']);
+                $num_noches = $fecha_salida_dt->diff($fecha_regreso_dt)->days;
+                
+                // Obtener datos del payload
+                $costo_vuelos = $data['costo_vuelos'] ?? 0;
+                $costo_hoteles = $data['costo_hoteles'] ?? 0;
+                $costo_transportes = $data['costo_transportes'] ?? 0;
+                $costo_tours = $data['costo_tours'] ?? 0;
+                $costo_seguros = $data['costo_seguros'] ?? 0;
+                $otros_costos = $data['otros_costos'] ?? 0;
+                $costo_total = $data['costo_total'] ?? 0;
+                $utilidad = $data['utilidad'] ?? 0;
+                $precio_venta_final = $data['precio_venta_final'] ?? 0;
+                $monto_comision = $data['monto_comision'] ?? 0;
+                $porcentaje_comision = ($precio_venta_final > 0) ? ($monto_comision / $precio_venta_final) * 100 : 0;
+                
+                // Actualizar cotización principal
+                $sql = "UPDATE cotizaciones SET
+                        origen = :origen,
+                        destino = :destino,
+                        fecha_salida = :fecha_salida,
+                        fecha_regreso = :fecha_regreso,
+                        num_noches = :num_noches,
+                        tipo_viaje = :tipo_viaje,
+                        num_adultos = :num_adultos,
+                        num_ninos = :num_ninos,
+                        num_infantes = :num_infantes,
+                        num_pasajeros_total = :num_pasajeros_total,
+                        descripcion_general = :descripcion_general,
+                        notas_internas = :notas_internas,
+                        costo_vuelos = :costo_vuelos,
+                        costo_hoteles = :costo_hoteles,
+                        costo_transportes = :costo_transportes,
+                        costo_tours = :costo_tours,
+                        costo_seguros = :costo_seguros,
+                        otros_costos = :otros_costos,
+                        costo_total = :costo_total,
+                        utilidad = :utilidad,
+                        precio_venta_final = :precio_venta_final,
+                        porcentaje_comision = :porcentaje_comision,
+                        monto_comision = :monto_comision,
+                        estado = :estado,
+                        fecha_modificacion = NOW()
+                        WHERE id = :id";
+                
+                $stmt = $this->conn->prepare($sql);
+                
+                $tipo_viaje = $data['tipo_viaje'] ?? 'individual';
+                $num_adultos = $data['num_adultos'] ?? 0;
+                $num_ninos = $data['num_ninos'] ?? 0;
+                $num_infantes = $data['num_infantes'] ?? 0;
+                $num_pasajeros_total = $data['num_pasajeros_total'] ?? 0;
+                $descripcion = $data['descripcion_general'] ?? '';
+                $notas = $data['notas_internas'] ?? '';
+                $estado = $data['estado'] ?? 'cotizacion';
+                
+                $stmt->bindParam(':origen', $data['origen']);
+                $stmt->bindParam(':destino', $data['destino']);
+                $stmt->bindParam(':fecha_salida', $data['fecha_salida']);
+                $stmt->bindParam(':fecha_regreso', $data['fecha_regreso']);
+                $stmt->bindParam(':num_noches', $num_noches);
+                $stmt->bindParam(':tipo_viaje', $tipo_viaje);
+                $stmt->bindParam(':num_adultos', $num_adultos);
+                $stmt->bindParam(':num_ninos', $num_ninos);
+                $stmt->bindParam(':num_infantes', $num_infantes);
+                $stmt->bindParam(':num_pasajeros_total', $num_pasajeros_total);
+                $stmt->bindParam(':descripcion_general', $descripcion);
+                $stmt->bindParam(':notas_internas', $notas);
+                $stmt->bindParam(':costo_vuelos', $costo_vuelos);
+                $stmt->bindParam(':costo_hoteles', $costo_hoteles);
+                $stmt->bindParam(':costo_transportes', $costo_transportes);
+                $stmt->bindParam(':costo_tours', $costo_tours);
+                $stmt->bindParam(':costo_seguros', $costo_seguros);
+                $stmt->bindParam(':otros_costos', $otros_costos);
+                $stmt->bindParam(':costo_total', $costo_total);
+                $stmt->bindParam(':utilidad', $utilidad);
+                $stmt->bindParam(':precio_venta_final', $precio_venta_final);
+                $stmt->bindParam(':porcentaje_comision', $porcentaje_comision);
+                $stmt->bindParam(':monto_comision', $monto_comision);
+                $stmt->bindParam(':estado', $estado);
+                $stmt->bindParam(':id', $id);
+                $stmt->execute();
+                
+                // Eliminar servicios existentes
+                $this->conn->prepare("DELETE FROM cotizacion_vuelos WHERE cotizacion_id = :id")->execute([':id' => $id]);
+                $this->conn->prepare("DELETE FROM cotizacion_hoteles WHERE cotizacion_id = :id")->execute([':id' => $id]);
+                $this->conn->prepare("DELETE FROM cotizacion_transportes WHERE cotizacion_id = :id")->execute([':id' => $id]);
+                $this->conn->prepare("DELETE FROM cotizacion_tours WHERE cotizacion_id = :id")->execute([':id' => $id]);
+                $this->conn->prepare("DELETE FROM cotizacion_seguros WHERE cotizacion_id = :id")->execute([':id' => $id]);
+                $this->conn->prepare("DELETE FROM cotizacion_pasajeros WHERE cotizacion_id = :id")->execute([':id' => $id]);
+                
+                // Insertar nuevos servicios
+                if (!empty($data['vuelos']) && is_array($data['vuelos'])) {
+                    foreach ($data['vuelos'] as $vuelo) {
+                        $this->insertarVuelo($id, $vuelo);
+                    }
+                }
+                
+                if (!empty($data['hoteles']) && is_array($data['hoteles'])) {
+                    foreach ($data['hoteles'] as $hotel) {
+                        $this->insertarHotel($id, $hotel);
+                    }
+                }
+                
+                if (!empty($data['transportes']) && is_array($data['transportes'])) {
+                    foreach ($data['transportes'] as $transporte) {
+                        $this->insertarTransporte($id, $transporte);
+                    }
+                }
+                
+                if (!empty($data['tours']) && is_array($data['tours'])) {
+                    foreach ($data['tours'] as $tour) {
+                        $this->insertarTour($id, $tour);
+                    }
+                }
+                
+                if (!empty($data['seguros']) && is_array($data['seguros'])) {
+                    foreach ($data['seguros'] as $seguro) {
+                        $this->insertarSeguro($id, $seguro);
+                    }
+                }
+                
+                // Vincular pasajeros
+                if (!empty($data['pasajeros_ids']) && is_array($data['pasajeros_ids'])) {
+                    foreach ($data['pasajeros_ids'] as $pasajero_id) {
+                        $this->vincularPasajero($id, $pasajero_id);
+                    }
+                }
+                
+                // Commit de la transacción
+                $this->conn->commit();
+                
+                // Obtener la cotización completa actualizada
+                $cotizacion_actualizada = $this->obtenerCotizacionCompleta($id);
+                
+                Response::success($cotizacion_actualizada, 'Cotización actualizada exitosamente');
+                
+            } catch (Exception $e) {
+                $this->conn->rollBack();
+                throw $e;
+            }
             
         } catch (Exception $e) {
             Response::error('Error al actualizar cotización: ' . $e->getMessage(), 500);
@@ -593,19 +716,30 @@ class CotizacionController {
         
         $stmt = $this->conn->prepare($sql);
         
-        $stmt->bindParam(':cotizacion_id', $cotizacion_id);
-        $stmt->bindParam(':tipo_transporte', $transporte['tipo_transporte']);
-        $stmt->bindParam(':proveedor', $transporte['proveedor']);
-        $stmt->bindParam(':origen', $transporte['origen']);
-        $stmt->bindParam(':destino', $transporte['destino']);
-        $stmt->bindParam(':fecha_servicio', $transporte['fecha_servicio']);
-        $stmt->bindParam(':num_pasajeros', $transporte['num_pasajeros']);
-        $stmt->bindParam(':num_dias', $transporte['num_dias']);
-        $stmt->bindParam(':costo_total', $transporte['costo_total']);
-        $stmt->bindParam(':precio_venta_total', $transporte['precio_venta_total']);
-        $stmt->bindParam(':comision_transporte', $transporte['comision_transporte']);
-        $stmt->bindParam(':utilidad', $transporte['utilidad']);
-        $stmt->bindParam(':notas', $transporte['notas']);
+        // DEBUG: Log transporte data
+        error_log("=== TRANSPORTE DATA ===");
+        error_log("Full transporte array: " . print_r($transporte, true));
+        error_log("tipo_transporte value: " . ($transporte['tipo_transporte'] ?? 'NULL/MISSING'));
+        error_log("=======================");
+        
+        // Ensure tipo_transporte has a value
+        $tipo_transporte = isset($transporte['tipo_transporte']) && !empty($transporte['tipo_transporte']) 
+            ? $transporte['tipo_transporte'] 
+            : 'terrestre'; // default value
+        
+        $stmt->bindValue(':cotizacion_id', $cotizacion_id, PDO::PARAM_INT);
+        $stmt->bindValue(':tipo_transporte', $tipo_transporte, PDO::PARAM_STR);
+        $stmt->bindValue(':proveedor', $transporte['proveedor'] ?? '', PDO::PARAM_STR);
+        $stmt->bindValue(':origen', $transporte['origen'] ?? '', PDO::PARAM_STR);
+        $stmt->bindValue(':destino', $transporte['destino'] ?? '', PDO::PARAM_STR);
+        $stmt->bindValue(':fecha_servicio', $transporte['fecha_servicio'] ?? null, PDO::PARAM_STR);
+        $stmt->bindValue(':num_pasajeros', $transporte['num_pasajeros'] ?? 1, PDO::PARAM_INT);
+        $stmt->bindValue(':num_dias', $transporte['num_dias'] ?? 1, PDO::PARAM_INT);
+        $stmt->bindValue(':costo_total', $transporte['costo_total'] ?? 0, PDO::PARAM_STR);
+        $stmt->bindValue(':precio_venta_total', $transporte['precio_venta_total'] ?? 0, PDO::PARAM_STR);
+        $stmt->bindValue(':comision_transporte', $transporte['comision_transporte'] ?? 0, PDO::PARAM_STR);
+        $stmt->bindValue(':utilidad', $transporte['utilidad'] ?? 0, PDO::PARAM_STR);
+        $stmt->bindValue(':notas', $transporte['notas'] ?? '', PDO::PARAM_STR);
         
         $stmt->execute();
     }
